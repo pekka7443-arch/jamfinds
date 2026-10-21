@@ -1,0 +1,11 @@
+import { PrismaClient } from '@prisma/client'
+const db = new PrismaClient({ log: [] })
+const byCat = await db.mod.groupBy({ by: ['category'], _count: { _all: true } })
+console.log('categories:', byCat.map(c => `${c.category}:${c._count._all}`).join(' '))
+const withLinks = await db.mod.count({ where: { hasLinks: true } })
+console.log('withLinks:', withLinks, '/', await db.mod.count())
+const sample = await db.mod.findFirst({ where: { title: { contains: 'BMW M3 F80' } } })
+console.log('BMW text tail:', JSON.stringify((sample?.text ?? '').slice(-120)))
+const need = await db.mod.findFirst({ where: { title: 'need' } })
+console.log('"need" post -> cat:', need?.category, '| hasLinks:', need?.hasLinks, '| text:', JSON.stringify((need?.text ?? '').slice(0, 80)))
+await db.$disconnect()

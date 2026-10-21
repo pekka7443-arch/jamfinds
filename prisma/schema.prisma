@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Mod {
+  id          String   @id // Reddit post id, e.g. t3_1ioki49
+  source      String // subreddit name, e.g. Beamng_Jamaica
+  title       String // cleaned display title (base64 codes stripped)
+  rawTitle    String // original title
+  author      String
+  permalink   String
+  text        String   @default("") // plain-text body extracted from feed html
+  thumbnail   String?
+  images      String   @default("[]") // JSON string array of image urls
+  links       String   @default("[]") // JSON string array of {url, host, label, decoded}
+  category    String   @default("other") // vehicle | map | skin | parts | request | info | other
+  hasLinks    Boolean  @default(false)
+  publishedAt DateTime // when posted on reddit
+  firstSeenAt DateTime @default(now()) // when our site first saw it
+  updatedAt   DateTime @updatedAt
+
+  @@index([publishedAt])
+  @@index([firstSeenAt])
+  @@index([source])
+  @@index([category])
+}
+
+model SyncState {
+  id           String    @id // "global"
+  lastSyncAt   DateTime?
+  lastResult   String? // ok | error
+  lastError    String?
+  lastSyncedMs Int       @default(0) // duration of last sync
+  syncCount    Int       @default(0)
+  totalSeen    Int       @default(0) // cumulative entries processed
+  backoffUntil DateTime?
+  updatedAt    DateTime  @updatedAt
+}
