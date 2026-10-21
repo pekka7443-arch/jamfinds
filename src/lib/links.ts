@@ -118,15 +118,37 @@ const SKIN_RE = /\b(skin|skins|livery|liveries|paint ?job|\bwrap\b|decals?|textu
 const PARTS_RE =
   /\b(engine|turbo|wheels?|\btyres?\b|\btires?\b|suspension|exhaust|swap|parts|rims?|bodykit|body kit|spoiler| Tuning |modular|steering wheel|cupholder|fps|booster|pack v)\b/i
 const REQUEST_RE =
-  /\b(request|requests|\bneed(ed)?\b|anyone (have|has|got)|any have|\bplz\b|\bpls\b|please|looking for|does any|where (can|do|i find)|can (some|any)one|help me find|mod request|\bwe need\b|missing)\b/i
+  /\b(request|requests|\bneed(ed)?\b|\bplz\b|\bpls\b|please|missing|\bhelp\b)\b/i
+
+/**
+ * Unambiguous request phrasings — these mark a post as a request even when it
+ * contains a link (e.g. a Discord invite). Release posts essentially never
+ * start with these, so they are safe to check before any content category.
+ */
+const STRONG_REQUEST_RE =
+  /\b(anyone (have|has|got|know|get)|anybody (have|has|got|know)|who (has|got|have)|looking for|does any(one|body)|can (some|any)one|can u( please)?|where (can|do|did|is|to)|help me find|mod request|\brequests?\b|\blf\b|\blft\b|send (me|it|link)|dm me|drop (the )?link|link (pls|plz|please)|willing to pay|is there (a|any|the))\b/i
 const INFO_RE =
   /\b(discord|how to|guide|tutorial|\brules\b|welcome|\bpsa\b|announcement|announcement|info|information|read (this|first)|base ?64)\b/i
 
-/** Infer a coarse category from title + body text. */
+/**
+ * Infer a coarse category from title + body text.
+ *
+ * Requests are detected FIRST and win over everything: the main grid shows
+ * downloadable mods only, and request posts must land in the Requests
+ * section — never among Vehicles/Maps/etc.
+ */
 export function inferCategory(title: string, text: string, hasLinks: boolean): string {
   const hay = `${title}\n${text}`
-  if (INFO_RE.test(hay) && !hasLinks) return "info"
+
+  // Strong request phrasings — unambiguous, links or not.
+  if (STRONG_REQUEST_RE.test(hay)) return "request"
+  // A linkless title that asks a question is a request/discussion, not a mod.
+  if (!hasLinks && /\?\s*$/.test(title.trim())) return "request"
+  // Weak request words — only trusted when the post has no download links
+  // (release posts can legitimately contain "need BeamNG 0.31+", "please read"...).
   if (REQUEST_RE.test(hay) && !hasLinks) return "request"
+
+  if (INFO_RE.test(hay) && !hasLinks) return "info"
   if (MAP_RE.test(title) || MAP_RE.test(text.slice(0, 400))) return "map"
   if (SKIN_RE.test(hay)) return "skin"
   if (PARTS_RE.test(title)) return "parts"

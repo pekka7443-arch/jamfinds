@@ -23,7 +23,10 @@ export async function GET(req: NextRequest) {
   if (q) {
     where.OR = [{ title: { contains: q } }, { text: { contains: q } }, { author: { contains: q } }]
   }
+  // Main feed (cat=all) shows downloadable mods only — request posts live
+  // exclusively in the Requests section so they never mix with real mods.
   if (cat && cat !== "all") where.category = cat
+  else where.category = { not: "request" }
   if (source && source !== "all") where.source = source
   if (withLinks) where.hasLinks = true
 

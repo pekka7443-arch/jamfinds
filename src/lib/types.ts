@@ -97,7 +97,7 @@ export function hostStyle(host: string): HostStyle {
 }
 
 export const CATEGORIES: { key: string; label: string }[] = [
-  { key: "all", label: "All" },
+  { key: "all", label: "All mods" },
   { key: "vehicle", label: "Vehicles" },
   { key: "map", label: "Maps" },
   { key: "skin", label: "Skins" },

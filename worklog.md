@@ -77,3 +77,19 @@ Work Log:
 Stage Summary:
 - Deliverable: same site, refined visual system — intentional single-hue dark palette with clear layer separation, ambient glow+grain depth, soft elevation surfaces, two-accent brand color story, hue-var badge family, glassy header/dialog. No functional or layout changes; all behavior identical.
 
+
+---
+Task ID: 4
+Agent: main (Z.ai)
+Task: Requests must never mix into the main mod feed — mods only in All/Vehicles/Maps/etc., requests exclusively in the Requests section.
+
+Work Log:
+- Root cause: inferCategory checked request patterns late (after info), only when !hasLinks, and missed many phrasings — "anyone got this BMW?" style posts landed in vehicle/other.
+- links.ts: added STRONG_REQUEST_RE (anyone have/got/know, anybody, who has, looking for, does anyone, can someone/u, where can/is, help me find, mod request, lf/lft, send me, dm me, drop link, willing to pay, "is there a...") checked FIRST regardless of links — legit even when the post has a (non-download) link like a Patreon page; linkless titles ending in "?" are requests; weak words (need/please/missing/help) stay !hasLinks-only (release posts legitimately say "need BeamNG 0.31+").
+- api/mods: cat=all now queries category != "request" — requests appear ONLY under the Requests chip; specific categories unaffected. Relabeled "All" chip to "All mods".
+- scripts/recategorize.ts (bun): one-time backfill recomputed categories for all rows — 30 rows re-bucketed (before: vehicle 211/request 79/other 61/parts 14/info 1 -> after: vehicle 187/request 109/other 59/parts 11/info 0). Sync loop keeps new entries consistent (upsert re-normalizes every cycle).
+- Spot-checked flagged rows: "0.40 RLS" (body: "Anyone have the new RLS for 0.40?" + patreon link) and "Kujees Cam Hub 1.3.0" (body: "Where could I find it?") are genuine requests — aggressive body matching is correct on this dataset.
+- Verified via API + browser: cat=all 269 results with 0 request badges on cards; cat=request 109 results all badged; cat=vehicle 187 results 0 requests; live toast fired on recategorization; no console errors.
+
+Stage Summary:
+- Main grid ("All mods") and every download category now show only actual mods; requests live solely in the Requests section (109). New posts categorize with the same request-first rules automatically.
