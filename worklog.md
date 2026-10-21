@@ -93,3 +93,22 @@ Work Log:
 
 Stage Summary:
 - Main grid ("All mods") and every download category now show only actual mods; requests live solely in the Requests section (109). New posts categorize with the same request-first rules automatically.
+
+---
+Task ID: 5
+Agent: main (Z.ai)
+Task: Downloads must happen ON JamFinds — files stream through the site instead of bouncing to external file hosts; non-proxyable hosts fall back gracefully.
+
+Work Log:
+- Probed every host in the DB (189 links: modsfire 67, beamfinds 40, beamfree 22, other 54, gdrive 5, discord 1) with curl to find direct-download strategies. Verified live: ModsFire 3-step chain (page -> /download/{id}/{token} with cookie jar -> /d/{id} 302 -> signed R2 URL, filename from base64 p= param; tested with a real 150 MB zip); Google Drive via drive.usercontent.google.com/download?id=...&confirm=t (streams with upstream Content-Disposition, verified "Gavril Scout .zip"); Pixeldrain /api/file/{id}?download; Mediafire page scrape; Dropbox dl=1; cdn.discordapp.com attachments. Not proxyable (JS/IP-gated, verified 403): BeamFree signed tokens, BeamFinds detail API, MEGA, Modland, Discord invites, Patreon -> external fallback.
+- New src/lib/resolvers.ts: resolveDownload() with per-host resolvers, curl -i subprocess helper (Node TLS fingerprint workaround, cookie-jar per resolution), redirect-chain-aware response parser (last status block wins), in-memory TTL cache (modsfire signed URLs 8 min of their 600 s validity, stable hosts 30 min), PROXY_ALLOWED_HOSTS allowlist. Never throws — always degrades to { mode: "external", reason }.
+- New GET /api/download: ?url= + optional ?name= (fallback filename). Allowlist check (no open proxy), resolve, then STREAM the file through the server with Content-Disposition: attachment (filename priority: upstream CD > resolver > name param), Range header passthrough (pause/resume works), content-type/length/range forwarded; native fetch first with a curl-spawn streaming fallback for TLS-fingerprint rejections; non-proxyable hosts/dead links -> 307 redirect to the original URL (old behaviour).
+- New GET /api/download/resolve: pre-flight status for the UI, shares the resolver cache so the later actual click reuses the resolution.
+- mod-dialog.tsx: per-link resolve state on open; primary button is now green "Download" (anchor to /api/download, download attr) with status line "Downloads here on JamFinds — no redirects" (primary, CheckCircle2); external links show outline "Open" + "Opens {host} in a new tab — {reason}" (e.g. "File removed from Modsfire"); loading state "Checking direct download…"; header hint "direct from JamFinds when possible"; Copy kept.
+- mod-card.tsx: compact "Get" quick-download pill (Download icon + Get) pinned right in the host-badge strip, stopPropagation so it doesn't open the dialog, links to /api/download with sanitized title as ?name=.
+- links.ts: exported classifyUrl (route uses it); extractLinks now splits glued URLs (fixed DB bug "modsfire.com/Xhttps://modsfire.com/X" being one link).
+- Fixed during QA: curl helper never passed -i so status was always 0 and dead-link detection never fired -> rewrote parser to split redirect chains (dead links now report "File removed from Modsfire"); resolver filename returned "d.php" -> basenameFromUrl now prefers the base64 p= payload.
+- Verified: typecheck clean; curl through /api/download streams a real 150 MB ModsFire zip (application/zip, correct Content-Disposition) and GDrive zip (206 + upstream filename); beamfinds/beamfree links 307-redirect; browser-verified dialog (proxy state green hint + Download for live links, external state for dead links), card Get buttons, mobile 390px (no overflow), cat=request isolation unchanged (109 / 0 leaked), zero console errors. Screenshots in download/dl-check-*.png.
+
+Stage Summary:
+- Deliverable: JamFinds now downloads files from the site itself — ModsFire/Google Drive/Pixeldrain/Mediafire/Dropbox/Discord-CDN links stream through /api/download (server resolves the direct URL, Range support, real filename); everything else falls back to opening the host. Requests section (Task 4) unaffected.

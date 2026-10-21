@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,14 +11,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { KeyRound, Copy, ExternalLink, User2, ImageIcon, Check, Globe } from "lucide-react";
+import { KeyRound, Copy, ExternalLink, User2, ImageIcon, Check, Globe, Download, CheckCircle2, Loader2 } from "lucide-react";
 import { hostStyle, parseLinks, parseImages, CATEGORY_STYLES, type ModItem } from "@/lib/types";
 import { sourceDef } from "@/lib/sources";
 import { categoryMeta } from "./mod-card";
 import { RelativeTime } from "./relative-time";
 
+type ResolveState = { mode: "loading" | "proxy" | "external"; reason?: string };
+
 export function ModDialog({ mod, open, onOpenChange }: { mod: ModItem | null; open: boolean; onOpenChange: (v: boolean) => void }) {
   const [copied, setCopied] = useState<string | null>(null);
+  const [resolves, setResolves] = useState<Record<string, ResolveState>>({});
   const links = useMemo(() => (mod ? parseLinks(mod) : []), [mod]);
   const images = useMemo(() => (mod ? parseImages(mod) : []), [mod]);
   const cat = mod ? categoryMeta(mod.category) : null;
@@ -26,6 +29,27 @@ export function ModDialog({ mod, open, onOpenChange }: { mod: ModItem | null; op
   const src = mod ? sourceDef(mod.source) : undefined;
   const isReddit = Boolean(mod && mod.id.startsWith("t3_"));
   const decodedCount = links.filter((l) => l.decoded).length;
+  const fallbackName = useMemo(
+    () => (mod ? mod.title.replace(/[/\\?%*:|<>"\r\n]/g, " ").replace(/\s+/g, " ").trim().slice(0, 80) || "mod" : "mod"),
+    [mod],
+  );
+
+  // Ask the server which links can be downloaded through JamFinds itself.
+  useEffect(() => {
+    if (!open || links.length === 0) return;
+    const ctrl = new AbortController();
+    setResolves(Object.fromEntries(links.slice(0, 4).map((l) => [l.url, { mode: "loading" as const }])));
+    links.slice(0, 4).forEach(async (l) => {
+      try {
+        const r = await fetch(`/api/download/resolve?url=${encodeURIComponent(l.url)}`, { signal: ctrl.signal });
+        const j = (await r.json()) as { mode: string; reason?: string };
+        setResolves((prev) => ({ ...prev, [l.url]: { mode: j.mode === "proxy" ? "proxy" : "external", reason: j.reason } }));
+      } catch {
+        if (!ctrl.signal.aborted) setResolves((prev) => ({ ...prev, [l.url]: { mode: "external" } }));
+      }
+    });
+    return () => ctrl.abort();
+  }, [open, links]);
 
   if (!mod) return null;
 
@@ -113,6 +137,9 @@ export function ModDialog({ mod, open, onOpenChange }: { mod: ModItem | null; op
             <span className="text-xs font-normal text-muted-foreground">
               {decodedCount > 0 ? `(${decodedCount} auto-decoded from base64)` : `(${links.length})`}
             </span>
+            <span className="ml-1.5 hidden items-center gap-1 text-[11px] font-normal text-primary sm:inline">
+              <Download className="h-3 w-3" aria-hidden="true" /> direct from JamFinds when possible
+            </span>
           </h4>
           {links.length === 0 ? (
             <p className="rounded-lg border border-dashed border-border p-3 text-sm leading-relaxed text-muted-foreground">
@@ -122,31 +149,59 @@ export function ModDialog({ mod, open, onOpenChange }: { mod: ModItem | null; op
           ) : (
             links.map((l) => {
               const st = hostStyle(l.host);
+              const rs = resolves[l.url];
+              const proxied = rs?.mode !== "external"; // loading + unknown default to Download
+              const dlHref = `/api/download?url=${encodeURIComponent(l.url)}&name=${encodeURIComponent(fallbackName)}`;
               return (
-                <div key={l.url} className="flex flex-col gap-2 rounded-lg border border-border bg-card/60 p-3 transition-colors duration-150 hover:border-foreground/20 sm:flex-row sm:items-center">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] font-medium ${st.className}`}>
-                        {l.decoded && <KeyRound className="h-3 w-3" aria-hidden="true" />}
-                        {l.label}
-                      </span>
-                      {l.decoded && <span className="text-[10px] font-medium text-gold">base64 decoded</span>}
+                <div key={l.url} className="rounded-lg border border-border bg-card/60 p-3 transition-colors duration-150 hover:border-foreground/20">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] font-medium ${st.className}`}>
+                          {l.decoded && <KeyRound className="h-3 w-3" aria-hidden="true" />}
+                          {l.label}
+                        </span>
+                        {l.decoded && <span className="text-[10px] font-medium text-gold">base64 decoded</span>}
+                      </div>
+                      <p className="mt-1 truncate font-mono text-xs text-muted-foreground" title={l.url}>
+                        {l.url}
+                      </p>
                     </div>
-                    <p className="mt-1 truncate font-mono text-xs text-muted-foreground" title={l.url}>
-                      {l.url}
-                    </p>
+                    <div className="flex shrink-0 gap-1.5">
+                      <Button size="sm" variant="outline" className="h-9 gap-1 sm:h-8" onClick={() => copy(l.url, l.url)}>
+                        {copied === l.url ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
+                        {copied === l.url ? "Copied" : "Copy"}
+                      </Button>
+                      {proxied ? (
+                        <Button size="sm" className="h-9 gap-1 bg-primary text-primary-foreground hover:bg-primary/90 sm:h-8" asChild>
+                          <a href={dlHref} download>
+                            <Download className="h-3.5 w-3.5" /> Download
+                          </a>
+                        </Button>
+                      ) : (
+                        <Button size="sm" variant="outline" className="h-9 gap-1 sm:h-8" asChild>
+                          <a href={l.url} target="_blank" rel="noreferrer nofollow">
+                            <ExternalLink className="h-3.5 w-3.5" /> Open
+                          </a>
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex shrink-0 gap-1.5">
-                    <Button size="sm" variant="outline" className="h-9 gap-1 sm:h-8" onClick={() => copy(l.url, l.url)}>
-                      {copied === l.url ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
-                      {copied === l.url ? "Copied" : "Copy"}
-                    </Button>
-                    <Button size="sm" className="h-9 gap-1 bg-primary text-primary-foreground hover:bg-primary/90 sm:h-8" asChild>
-                      <a href={l.url} target="_blank" rel="noreferrer nofollow">
-                        <ExternalLink className="h-3.5 w-3.5" /> Open
-                      </a>
-                    </Button>
-                  </div>
+                  <p className="mt-2 flex items-center gap-1.5 text-[11px] leading-none text-muted-foreground">
+                    {rs === undefined || rs.mode === "loading" ? (
+                      <>
+                        <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" /> Checking direct download…
+                      </>
+                    ) : rs.mode === "proxy" ? (
+                      <span className="inline-flex items-center gap-1 text-primary">
+                        <CheckCircle2 className="h-3 w-3" aria-hidden="true" /> Downloads here on JamFinds — no redirects
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1">
+                        <ExternalLink className="h-3 w-3" aria-hidden="true" /> Opens {l.label} in a new tab{rs.reason ? ` — ${rs.reason}` : ""}
+                      </span>
+                    )}
+                  </p>
                 </div>
               );
             })

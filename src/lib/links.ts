@@ -19,7 +19,7 @@ export interface ExtractedLink {
   decoded: boolean // true when it came from a base64 code
 }
 
-function classifyUrl(url: string): { host: string; label: string } {
+export function classifyUrl(url: string): { host: string; label: string } {
   let parsed: URL
   try {
     parsed = new URL(url)
@@ -74,11 +74,13 @@ export function extractLinks(...texts: (string | null | undefined)[]): Extracted
 
   const found = new Map<string, ExtractedLink>()
 
-  // 1. Plain URLs
+  // 1. Plain URLs (some posts glue two URLs together — split them apart)
   for (const match of joined.matchAll(URL_RE)) {
-    const url = match[0].replace(/[.,;]+$/, "")
-    const { host, label } = classifyUrl(url)
-    if (!found.has(url)) found.set(url, { url, host, label, decoded: false })
+    for (const raw of match[0].split(/(?=https?:\/\/)/)) {
+      const url = raw.replace(/[.,;]+$/, "")
+      const { host, label } = classifyUrl(url)
+      if (!found.has(url)) found.set(url, { url, host, label, decoded: false })
+    }
   }
 
   // 2. Base64-encoded URLs
