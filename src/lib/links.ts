@@ -38,6 +38,8 @@ function classifyUrl(url: string): { host: string; label: string } {
   if (h.endsWith("pixeldrain.com")) return { host: "pixeldrain", label: "Pixeldrain" }
   if (h.endsWith("onedrive.live.com") || h.endsWith("1drv.ms")) return { host: "onedrive", label: "OneDrive" }
   if (h.endsWith("dropbox.com")) return { host: "dropbox", label: "Dropbox" }
+  if (h === "beamfinds.com" || h.endsWith(".beamfinds.com")) return { host: "beamfinds", label: "BeamFinds" }
+  if (h === "beamfree.pro" || h.endsWith(".beamfree.pro")) return { host: "beamfree", label: "BeamFree" }
   return { host: "other", label: "Link" }
 }
 

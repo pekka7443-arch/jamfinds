@@ -1,28 +1,31 @@
 /**
- * Reddit -> DB sync engine.
+ * Multi-source -> DB sync engine.
  *
- * - Polls every source subreddit's /new/.rss feed
- * - Upserts entries into the Mod table (preserving firstSeenAt)
- * - Runs a background interval so the site stays fresh without visitors
- * - Exponential backoff on 429s / failures
- * - Single-flight lock so overlapping requests don't double-sync
+ * Sources (see src/lib/sources.ts):
+ *  - 4 subreddits polled via /new/.rss feeds (src/lib/reddit.ts)
+ *  - BeamFinds via its public JSON API + BeamFree via HTML scrape (src/lib/scrapers.ts)
+ *
+ * Behavior:
+ *  - Upserts entries into the Mod table (preserving firstSeenAt AND the oldest
+ *    publishedAt, so scraped entries without real timestamps never drift)
+ *  - Runs a background interval so the site stays fresh without visitors
+ *  - Exponential backoff on 429s / total failures
+ *  - Single-flight lock so overlapping requests don't double-sync
  */
 
 import { db } from "@/lib/db"
-import { fetchSubredditFeed, htmlToText, type FeedEntry } from "@/lib/reddit"
+import { fetchSubredditFeed, htmlToText } from "@/lib/reddit"
+import { fetchBeamfinds, fetchBeamfree, type NormalizedEntry } from "@/lib/scrapers"
 import { cleanTitle, extractLinks, inferCategory } from "@/lib/links"
+import { SOURCE_DEFS, SOURCES } from "@/lib/sources"
 
-/**
- * Source subreddits polled for mods. Reddit sub names are case-insensitive,
- * so they are normalized + deduped here. Add more subs to this array and the
- * sync engine picks them up automatically.
- */
-export const SOURCES = [...new Set(["Beamng_Jamaica"].map((s) => s.toLowerCase()))].map(
-  (s) => s.charAt(0).toUpperCase() + s.slice(1),
-) as string[]
+export { SOURCES }
 
 const SYNC_INTERVAL_MS = 60_000 // aim: every minute
-const FETCH_GAP_MS = 4_000 // gap between source fetches
+const FETCH_GAP_WEB_MS = 1_200 // gap between web-source fetches
+const FETCH_GAP_REDDIT_MS = 4_500 // generous gap between subs — Reddit 429s fast
+const WEB_SOURCE_MIN_INTERVAL_MS = 180_000 // web sites update slowly; be gentle
+const REDDIT_PER_CYCLE = 2 // round-robin subs per cycle — halves 429 pressure
 const BACKOFF_STEPS_MS = [60_000, 120_000, 300_000, 600_000]
 const MAX_PER_FEED = 100
 
@@ -31,6 +34,9 @@ interface SyncInternals {
   consecutiveFailures: number
   timer: NodeJS.Timeout | null
   started: boolean
+  gen?: symbol // module generation that owns the current timer
+  lastWebFetch?: Record<string, number> // per web-source last fetch (ms epoch)
+  redditCursor?: number // round-robin position across subreddits
 }
 
 // Survive Next.js HMR module reloads
@@ -47,78 +53,151 @@ export interface SyncResult {
   error?: string
 }
 
-async function upsertEntry(entry: FeedEntry): Promise<"insert" | "update"> {
-  const text = htmlToText(entry.contentHtml).slice(0, 4000)
-  // Ignore reddit-internal URLs (permalinks/images) — they are not download links
-  const links = extractLinks(entry.title, text).filter(
-    (l) => !/https?:\/\/(?:[\w-]+\.)*(?:reddit\.com|redd\.it)\//i.test(l.url),
-  )
-  const title = cleanTitle(entry.title) || entry.title
-  const hasLinks = links.length > 0
-  const category = inferCategory(title, text, hasLinks)
-
-  const data = {
-    source: entry.source,
-    title: title.slice(0, 300),
-    rawTitle: entry.title.slice(0, 300),
-    author: entry.author,
-    permalink: entry.permalink,
+/** Normalize a raw entry: clean title, extract links, infer category. */
+function normalize(entry: NormalizedEntry): NormalizedEntry & { category: string; hasLinks: boolean } {
+  const isReddit = entry.id.startsWith("t3_")
+  const text = entry.text.slice(0, 4000)
+  const links =
+    entry.links.length > 0
+      ? entry.links
+      : extractLinks(entry.title, text).filter(
+          (l) => !/https?:\/\/(?:[\w-]+\.)*(?:reddit\.com|redd\.it)\//i.test(l.url),
+        )
+  const rawTitle = entry.title
+  const title = (isReddit ? cleanTitle(entry.title) || entry.title : entry.title).slice(0, 300)
+  return {
+    ...entry,
+    title,
+    rawTitle: rawTitle.slice(0, 300),
     text,
-    thumbnail: entry.thumbnail,
-    images: JSON.stringify(entry.images),
-    links: JSON.stringify(links),
-    category,
-    hasLinks,
-    publishedAt: entry.publishedAt,
-  }
-
-  const existing = await db.mod.findUnique({ where: { id: entry.id }, select: { id: true } })
-  if (existing) {
-    await db.mod.update({ where: { id: entry.id }, data })
-    return "update"
-  } else {
-    await db.mod.create({ data: { id: entry.id, ...data } })
-    return "insert"
+    links,
+    hasLinks: links.length > 0,
+    category: inferCategory(title, text, links.length > 0),
   }
 }
+
+async function upsertEntry(entry: NormalizedEntry): Promise<"insert" | "update"> {
+  const n = normalize(entry)
+  if (isNaN(n.publishedAt.getTime())) n.publishedAt = new Date()
+  const data = {
+    source: n.source,
+    title: n.title,
+    rawTitle: n.rawTitle,
+    author: n.author,
+    permalink: n.permalink,
+    text: n.text,
+    thumbnail: n.thumbnail,
+    images: JSON.stringify(n.images),
+    links: JSON.stringify(n.links),
+    category: n.category,
+    hasLinks: n.hasLinks,
+  }
+
+  const existing = await db.mod.findUnique({
+    where: { id: entry.id },
+    select: { id: true, publishedAt: true },
+  })
+  if (existing) {
+    // Keep the oldest publishedAt — scraped listings have no timestamps and
+    // would otherwise drift forward on every sync.
+    const publishedAt =
+      existing.publishedAt.getTime() <= n.publishedAt.getTime() ? existing.publishedAt : n.publishedAt
+    await db.mod.update({ where: { id: entry.id }, data: { ...data, publishedAt } })
+    return "update"
+  }
+  await db.mod.create({ data: { id: n.id, ...data, publishedAt: n.publishedAt } })
+  return "insert"
+}
+
+/** Collect fresh entries from every source, with per-source error capture. */
+async function fetchAllSources(): Promise<{ fetched: number; lastError?: string }> {
+  let fetched = 0
+  let lastError: string | undefined
+
+  // Web sources first (reliable, Reddit-independent), then a rotating slice
+  // of REDDIT_PER_CYCLE subreddits. Round-robin keeps per-minute request
+  // pressure low enough that Reddit rarely answers 429.
+  const webDefs = SOURCE_DEFS.filter((d) => d.kind === "web")
+  const redditDefs = SOURCE_DEFS.filter((d) => d.kind === "reddit")
+  const start = state.redditCursor ?? 0
+  const slice = redditDefs
+    .slice(start, start + REDDIT_PER_CYCLE)
+    .concat(start + REDDIT_PER_CYCLE > redditDefs.length ? redditDefs.slice(0, (start + REDDIT_PER_CYCLE) % redditDefs.length) : [])
+  state.redditCursor = (start + REDDIT_PER_CYCLE) % Math.max(1, redditDefs.length)
+  const ordered = [...webDefs, ...slice]
+
+  for (const def of ordered) {
+    if (
+      def.kind === "web" &&
+      state.lastWebFetch?.[def.key] &&
+      Date.now() - state.lastWebFetch[def.key] < WEB_SOURCE_MIN_INTERVAL_MS
+    ) {
+      continue // fetched recently — skip this cycle
+    }
+    try {
+      let entries: NormalizedEntry[] = []
+      if (def.kind === "reddit") {
+        const feed = await fetchSubredditFeed(def.key, MAX_PER_FEED)
+        entries = feed.map((e) => ({
+          id: e.id,
+          source: def.key,
+          title: e.title,
+          author: e.author,
+          permalink: e.permalink,
+          publishedAt: e.publishedAt,
+          text: htmlToText(e.contentHtml),
+          thumbnail: e.thumbnail,
+          images: e.images,
+          links: [],
+        }))
+      } else if (def.key === "BeamFinds") {
+        entries = await fetchBeamfinds(2)
+      } else if (def.key === "BeamFree") {
+        entries = await fetchBeamfree()
+      }
+      fetched += entries.length
+      if (def.kind === "web") {
+        state.lastWebFetch = { ...(state.lastWebFetch ?? {}), [def.key]: Date.now() }
+      }
+      for (const entry of entries) {
+        const kind = await upsertEntry(entry)
+        if (kind === "insert") insertedCount++
+        else updatedCount++
+      }
+    } catch (err) {
+      lastError = `${def.label}: ${(err as Error).message}`
+      if ((err as Error & { status?: number }).status === 429 && def.kind === "reddit") {
+        break // stop the reddit portion this cycle; web sources already done
+      }
+    }
+    await new Promise((r) => setTimeout(r, def.kind === "reddit" ? FETCH_GAP_REDDIT_MS : FETCH_GAP_WEB_MS))
+  }
+  return { fetched, lastError }
+}
+
+// simple counters shared with runSync (single-flight lock makes this safe)
+let insertedCount = 0
+let updatedCount = 0
 
 async function runSync(force: boolean): Promise<SyncResult> {
   if (state.running) {
     return { ok: true, inserted: 0, updated: 0, fetched: 0, durationMs: 0, error: "sync-already-running" }
   }
   state.running = true
+  insertedCount = 0
+  updatedCount = 0
   const startedAt = Date.now()
-  let inserted = 0
-  let updated = 0
-  let fetched = 0
-  let lastError: string | undefined
 
   try {
     // Check backoff unless forced
     if (!force) {
       const st = await db.syncState.findUnique({ where: { id: "global" } })
       if (st?.backoffUntil && st.backoffUntil.getTime() > Date.now()) {
-        state.running = false
         return { ok: false, inserted: 0, updated: 0, fetched: 0, durationMs: 0, error: "backing-off" }
       }
     }
 
-    for (const sub of SOURCES) {
-      try {
-        const entries = await fetchSubredditFeed(sub, MAX_PER_FEED)
-        fetched += entries.length
-        for (const entry of entries) {
-          const kind = await upsertEntry(entry)
-          if (kind === "insert") inserted++
-          else updated++
-        }
-      } catch (err) {
-        lastError = (err as Error).message
-        if ((err as Error & { status?: number }).status === 429) break // stop hammering
-      }
-      await new Promise((r) => setTimeout(r, FETCH_GAP_MS))
-    }
-
+    const { fetched, lastError } = await fetchAllSources()
     const durationMs = Date.now() - startedAt
     const anyFetchError = Boolean(lastError)
     const partialSuccess = fetched > 0
@@ -149,7 +228,7 @@ async function runSync(force: boolean): Promise<SyncResult> {
           backoffUntil: new Date(Date.now() + backoffMs),
         },
       })
-      return { ok: false, inserted, updated, fetched, durationMs, error: lastError }
+      return { ok: false, inserted: 0, updated: 0, fetched, durationMs, error: lastError }
     }
 
     // success (or partial)
@@ -175,7 +254,7 @@ async function runSync(force: boolean): Promise<SyncResult> {
         backoffUntil: null,
       },
     })
-    return { ok: true, inserted, updated, fetched, durationMs }
+    return { ok: true, inserted: insertedCount, updated: updatedCount, fetched, durationMs }
   } finally {
     state.running = false
   }
@@ -198,15 +277,29 @@ export async function ensureSync(maxAgeMs = SYNC_INTERVAL_MS, force = false): Pr
   }
 }
 
-/** Start the background sync loop (idempotent across HMR). */
+/** Start the background sync loop (idempotent, HMR-safe). */
 export function startSyncLoop(): void {
-  if (state.started) return
-  state.started = true
-  // First sync shortly after boot, then every interval
-  setTimeout(() => void ensureSync(0), 1500)
-  state.timer = setInterval(() => void ensureSync(SYNC_INTERVAL_MS), SYNC_INTERVAL_MS)
-  if (state.timer.unref) state.timer.unref()
+  // After an HMR reload this module is a fresh generation: if an older
+  // generation still owns the interval, replace it with current code.
+  const gen = startSyncLoopSymbol
+  if (state.timer && state.gen !== gen) {
+    clearInterval(state.timer)
+    state.timer = null
+  }
+  state.gen = gen
+  if (!state.started) {
+    state.started = true
+    // First sync shortly after boot
+    setTimeout(() => void ensureSync(0), 1500)
+  }
+  if (!state.timer) {
+    state.timer = setInterval(() => void ensureSync(SYNC_INTERVAL_MS), SYNC_INTERVAL_MS)
+    if (state.timer.unref) state.timer.unref()
+  }
 }
+
+// New symbol identity on every module evaluation (HMR reload detector).
+const startSyncLoopSymbol = Symbol("jamSyncGen")
 
 export function isSyncRunning(): boolean {
   return state.running

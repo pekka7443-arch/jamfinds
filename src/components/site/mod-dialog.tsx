@@ -11,15 +11,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import {
-  KeyRound,
-  Copy,
-  ExternalLink,
-  User2,
-  ImageIcon,
-  Check,
-} from "lucide-react";
-import { hostStyle, parseLinks, parseImages, type ModItem } from "@/lib/types";
+import { KeyRound, Copy, ExternalLink, User2, ImageIcon, Check, Globe } from "lucide-react";
+import { hostStyle, parseLinks, parseImages, CATEGORY_STYLES, type ModItem } from "@/lib/types";
+import { sourceDef } from "@/lib/sources";
 import { categoryMeta } from "./mod-card";
 import { RelativeTime } from "./relative-time";
 
@@ -28,6 +22,10 @@ export function ModDialog({ mod, open, onOpenChange }: { mod: ModItem | null; op
   const links = useMemo(() => (mod ? parseLinks(mod) : []), [mod]);
   const images = useMemo(() => (mod ? parseImages(mod) : []), [mod]);
   const cat = mod ? categoryMeta(mod.category) : null;
+  const catCls = mod ? CATEGORY_STYLES[mod.category] ?? CATEGORY_STYLES.other : "";
+  const src = mod ? sourceDef(mod.source) : undefined;
+  const isReddit = Boolean(mod && mod.id.startsWith("t3_"));
+  const decodedCount = links.filter((l) => l.decoded).length;
 
   if (!mod) return null;
 
@@ -44,28 +42,29 @@ export function ModDialog({ mod, open, onOpenChange }: { mod: ModItem | null; op
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto nice-scroll border-border bg-popover">
+      <DialogContent className="nice-scroll max-h-[85vh] max-w-2xl overflow-y-auto border-border bg-popover">
         <DialogHeader>
           <div className="flex flex-wrap items-center gap-2 pr-6">
             {cat && (
-              <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${cat.cls}`}>
+              <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${catCls}`}>
                 {cat.icon}
                 {cat.label}
               </span>
             )}
-            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/60 px-2 py-0.5 text-[11px] text-muted-foreground">
-              r/{mod.source}
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary/60 px-2 py-0.5 text-[11px] text-muted-foreground">
+              <span className={`h-1.5 w-1.5 rounded-full ${src?.dot ?? "bg-zinc-400"}`} aria-hidden="true" />
+              {src?.label ?? mod.source}
             </span>
-            {links.some((l) => l.decoded) && (
-              <Badge className="border-0 bg-gold/90 text-black text-[11px] font-bold">
-                <KeyRound className="mr-1 h-3 w-3" aria-hidden="true" /> Link decoded
+            {decodedCount > 0 && (
+              <Badge className="border-0 bg-gold/90 text-[11px] font-bold text-black">
+                <KeyRound className="mr-1 h-3 w-3" aria-hidden="true" /> {decodedCount} decoded
               </Badge>
             )}
           </div>
-          <DialogTitle className="text-left text-lg leading-snug pr-6">{mod.title}</DialogTitle>
+          <DialogTitle className="pr-6 text-left text-lg leading-snug">{mod.title}</DialogTitle>
           <DialogDescription className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
             <span className="inline-flex items-center gap-1">
-              <User2 className="h-3 w-3" aria-hidden="true" /> u/{mod.author}
+              <User2 className="h-3 w-3" aria-hidden="true" /> {mod.author}
             </span>
             <span>·</span>
             <span>
@@ -73,14 +72,14 @@ export function ModDialog({ mod, open, onOpenChange }: { mod: ModItem | null; op
             </span>
             <span>·</span>
             <span>
-              found by JamFinds <RelativeTime iso={mod.firstSeenAt} />
+              indexed by JamFinds <RelativeTime iso={mod.firstSeenAt} />
             </span>
           </DialogDescription>
         </DialogHeader>
 
         {/* Images */}
         {images.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto nice-scroll pb-1" role="list" aria-label="Post images">
+          <div className="nice-scroll flex gap-2 overflow-x-auto pb-1" role="list" aria-label="Post images">
             {images.map((src, i) => (
               <a key={src} href={src} target="_blank" rel="noreferrer" className="relative shrink-0" role="listitem">
                 <img
@@ -101,47 +100,48 @@ export function ModDialog({ mod, open, onOpenChange }: { mod: ModItem | null; op
         {/* Body text */}
         {mod.text && (
           <div className="rounded-lg border border-border bg-card/60 p-3">
-            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground/90 nice-scroll max-h-64 overflow-y-auto">
+            <p className="nice-scroll max-h-64 overflow-y-auto whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground/90">
               {mod.text}
             </p>
           </div>
         )}
 
-        {/* Decoded links */}
+        {/* Links */}
         <div className="space-y-2">
           <h4 className="text-sm font-semibold">
             Download links{" "}
             <span className="text-xs font-normal text-muted-foreground">
-              ({links.filter((l) => l.decoded).length} auto-decoded from base64)
+              {decodedCount > 0 ? `(${decodedCount} auto-decoded from base64)` : `(${links.length})`}
             </span>
           </h4>
           {links.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">
-              No download link found in this post — it may be a request or discussion. Check the Reddit thread or ask the author.
+            <p className="rounded-lg border border-dashed border-border p-3 text-sm leading-relaxed text-muted-foreground">
+              No download link found in this post — it may be a request or discussion. Check the original thread or
+              ask the author.
             </p>
           ) : (
             links.map((l) => {
               const st = hostStyle(l.host);
               return (
-                <div key={l.url} className="flex flex-col gap-2 rounded-lg border border-border bg-card/60 p-3 sm:flex-row sm:items-center">
+                <div key={l.url} className="flex flex-col gap-2 rounded-lg border border-border bg-card/60 p-3 transition-colors duration-150 hover:border-foreground/20 sm:flex-row sm:items-center">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                       <span className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] font-medium ${st.className}`}>
                         {l.decoded && <KeyRound className="h-3 w-3" aria-hidden="true" />}
                         {l.label}
                       </span>
-                      {l.decoded && <span className="text-[10px] text-gold">base64 decoded</span>}
+                      {l.decoded && <span className="text-[10px] font-medium text-gold">base64 decoded</span>}
                     </div>
                     <p className="mt-1 truncate font-mono text-xs text-muted-foreground" title={l.url}>
                       {l.url}
                     </p>
                   </div>
                   <div className="flex shrink-0 gap-1.5">
-                    <Button size="sm" variant="outline" className="h-8 gap-1" onClick={() => copy(l.url, l.url)}>
+                    <Button size="sm" variant="outline" className="h-9 gap-1 sm:h-8" onClick={() => copy(l.url, l.url)}>
                       {copied === l.url ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
                       {copied === l.url ? "Copied" : "Copy"}
                     </Button>
-                    <Button size="sm" className="h-8 gap-1 bg-emerald-600 hover:bg-emerald-500" asChild>
+                    <Button size="sm" className="h-9 gap-1 bg-emerald-600 hover:bg-emerald-500 sm:h-8" asChild>
                       <a href={l.url} target="_blank" rel="noreferrer nofollow">
                         <ExternalLink className="h-3.5 w-3.5" /> Open
                       </a>
@@ -153,16 +153,17 @@ export function ModDialog({ mod, open, onOpenChange }: { mod: ModItem | null; op
           )}
         </div>
 
-        {/* Reddit actions */}
+        {/* Source actions */}
         <div className="flex flex-wrap gap-2 border-t border-border pt-3">
           <Button className="gap-1.5 bg-orange-600 hover:bg-orange-500" asChild>
             <a href={mod.permalink} target="_blank" rel="noreferrer">
-              <ExternalLink className="h-4 w-4" /> Open on Reddit
+              {isReddit ? <ExternalLink className="h-4 w-4" /> : <Globe className="h-4 w-4" />}
+              {isReddit ? "Open on Reddit" : `Open on ${src?.label ?? "source site"}`}
             </a>
           </Button>
-          <Button variant="outline" className="gap-1.5" onClick={() => copy(mod.permalink, "reddit")}>
-            {copied === "reddit" ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
-            {copied === "reddit" ? "Copied" : "Copy Reddit link"}
+          <Button variant="outline" className="gap-1.5" onClick={() => copy(mod.permalink, "src")}>
+            {copied === "src" ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+            {copied === "src" ? "Copied" : "Copy link"}
           </Button>
         </div>
       </DialogContent>

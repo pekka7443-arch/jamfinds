@@ -21,13 +21,25 @@ const archivoBlack = Archivo_Black({
 });
 
 export const metadata: Metadata = {
-  title: "JamFinds — Jamaica BeamNG Mods, Live from Reddit",
+  title: "JamFinds — Live BeamNG Mods from Reddit, BeamFinds & BeamFree",
   description:
-    "A live mod finder for Jamaican BeamNG.drive mods. Automatically syncs new releases from r/Beamng_Jamaica and auto-decodes base64 download links in real time.",
-  keywords: ["BeamNG", "BeamNG.drive", "Jamaica mods", "r/Beamng_Jamaica", "mod finder", "live mods"],
+    "A live BeamNG.drive mod finder. Automatically syncs new releases from r/Beamng_Jamaica, r/BeamNGpiratemods, r/beamng_leakedmods, r/BeamNG_Leaked_M0ds, BeamFinds and BeamFree — and auto-decodes base64 download links in real time.",
+  keywords: [
+    "BeamNG",
+    "BeamNG.drive",
+    "BeamNG mods",
+    "r/Beamng_Jamaica",
+    "r/BeamNGpiratemods",
+    "r/beamng_leakedmods",
+    "BeamFinds",
+    "BeamFree",
+    "mod finder",
+    "live mods",
+  ],
   openGraph: {
-    title: "JamFinds — Jamaica BeamNG Mods",
-    description: "Live Jamaica BeamNG mods, auto-synced from Reddit with decoded download links.",
+    title: "JamFinds — Live BeamNG Mods, Multi-Source",
+    description:
+      "Live BeamNG mods auto-synced from 4 subreddits + BeamFinds + BeamFree, with decoded download links.",
     siteName: "JamFinds",
     type: "website",
   },

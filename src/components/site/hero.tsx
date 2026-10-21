@@ -2,6 +2,7 @@
 
 import { Car, Unlock, Clock3, Database } from "lucide-react";
 import type { ModsResponse } from "@/lib/types";
+import { SOURCE_DEFS } from "@/lib/sources";
 import { RelativeTime } from "./relative-time";
 
 interface HeroProps {
@@ -23,14 +24,16 @@ function StatCard({
   accent: string;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card/70 p-4 flex flex-col gap-1">
+    <div className="flex flex-col gap-1 rounded-xl border border-border bg-card/70 p-4">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <span className={`inline-flex h-6 w-6 items-center justify-center rounded-md ${accent}`} aria-hidden="true">
           {icon}
         </span>
-        {label}
+        <span className="leading-tight">{label}</span>
       </div>
-      <div className="font-[family-name:var(--font-display)] text-2xl leading-7 text-foreground">{value}</div>
+      <div className="font-[family-name:var(--font-display)] text-[1.375rem] leading-7 text-foreground sm:text-2xl">
+        {value}
+      </div>
       {hint ? <div className="text-xs text-muted-foreground">{hint}</div> : null}
     </div>
   );
@@ -39,49 +42,50 @@ function StatCard({
 export function Hero({ data, isLoading }: HeroProps) {
   return (
     <section className="hero-bg border-b border-border/60">
-      <div className="mx-auto max-w-7xl px-4 pt-10 pb-8">
+      <div className="mx-auto max-w-7xl px-4 pb-8 pt-10 sm:px-6">
         <div className="flex flex-col items-start gap-3">
           <span className="inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-semibold text-gold">
-            🇯🇲 BeamNG.drive · Jamaica mod hub
+            🇯🇲 BeamNG.drive · live multi-source hub
           </span>
-          <h1 className="font-[family-name:var(--font-display)] text-3xl sm:text-4xl md:text-5xl leading-tight tracking-tight">
-            Find Jamaican <span className="text-gradient-jam">BeamNG mods</span>
-            <br className="hidden sm:block" /> the second they drop.
+          <h1 className="tt-display max-w-3xl">
+            Every BeamNG mod drop,
+            <br className="hidden sm:block" /> <span className="text-gradient-jam">the second it lands.</span>
           </h1>
-          <p className="max-w-2xl text-sm sm:text-base text-muted-foreground">
-            JamFinds watches r/Beamng_Jamaica around the clock, pulls every new release the
-            moment it&apos;s posted, and automatically decodes the base64 mod links for you — no decoder sites, no
-            hunting. Fresh finds appear here in about a minute.
+          <p className="tt-body max-w-2xl text-muted-foreground">
+            JamFinds watches four subreddits and two mod sites around the clock — r/Beamng_Jamaica,
+            r/BeamNGpiratemods, r/beamng_leakedmods, r/BeamNG_Leaked_M0ds, BeamFinds and BeamFree — and pulls each
+            new release the moment it appears. Base64 mod codes from Reddit are decoded automatically: no decoder
+            sites, no hunting.
           </p>
         </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="mt-7 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <StatCard
             icon={<Database className="h-3.5 w-3.5 text-emerald-400" />}
             label="Mods indexed"
             value={isLoading ? "…" : data?.stats.total ?? 0}
-            hint={`from ${data?.stats.sources.length ?? 0} subreddit${(data?.stats.sources.length ?? 0) === 1 ? "" : "s"}`}
+            hint={`from ${data?.stats.sources.length ?? 0} source${(data?.stats.sources.length ?? 0) === 1 ? "" : "s"}`}
             accent="bg-emerald-500/15"
           />
           <StatCard
             icon={<Clock3 className="h-3.5 w-3.5 text-gold" />}
-            label="New on Reddit (24h)"
+            label="New in 24h"
             value={isLoading ? "…" : data?.stats.fresh24h ?? 0}
-            hint="posts published in the last day"
+            hint="published in the last day"
             accent="bg-gold/15"
           />
           <StatCard
             icon={<Unlock className="h-3.5 w-3.5 text-amber-400" />}
             label="Ready to download"
             value={isLoading ? "…" : data?.stats.withLinks ?? 0}
-            hint="decoded links included"
+            hint="links found & decoded"
             accent="bg-amber-500/15"
           />
           <StatCard
             icon={<Car className="h-3.5 w-3.5 text-emerald-400" />}
             label="Last sync"
             value={data?.sync.lastSyncAt ? <RelativeTime iso={data.sync.lastSyncAt} /> : isLoading ? "…" : "—"}
-            hint="auto-refreshes every minute"
+            hint={`across ${SOURCE_DEFS.length} sources, every minute`}
             accent="bg-emerald-500/15"
           />
         </div>
