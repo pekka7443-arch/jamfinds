@@ -53,6 +53,24 @@ export interface SyncResult {
   error?: string
 }
 
+/** Map a source's own category label (BeamFree "Map", "Cars"...) to our taxonomy. */
+function hintToCategory(hint?: string): string | null {
+  if (!hint) return null
+  const h = hint.toLowerCase()
+  if (/\bmap\b|terrain|\btrack\b|location/.test(h)) return "map"
+  if (/\bcar\b|vehicle|\bsedan\b|\bcoupe\b|\bsuv\b|\btruck\b|\bsemi\b|\bbus\b|\bbike\b|motorcycle/.test(h)) return "vehicle"
+  if (/skin|livery|paint|texture/.test(h)) return "skin"
+  if (/part|tuning|engine|wheel/.test(h)) return "parts"
+  return null
+}
+
+/** Google Drive file links give us a free preview image via lh3.googleusercontent. */
+function gdriveThumbFromLinks(links: { url: string; host: string }[]): string | null {
+  const g = links.find((l) => l.host === "gdrive" && /\/file\/d\/([A-Za-z0-9_-]{10,})/.test(l.url))
+  const id = g?.url.match(/\/file\/d\/([A-Za-z0-9_-]{10,})/)?.[1]
+  return id ? `https://lh3.googleusercontent.com/d/${id}=w400` : null
+}
+
 /** Normalize a raw entry: clean title, extract links, infer category. */
 function normalize(entry: NormalizedEntry): NormalizedEntry & { category: string; hasLinks: boolean } {
   const isReddit = entry.id.startsWith("t3_")
@@ -65,14 +83,21 @@ function normalize(entry: NormalizedEntry): NormalizedEntry & { category: string
         )
   const rawTitle = entry.title
   const title = (isReddit ? cleanTitle(entry.title) || entry.title : entry.title).slice(0, 300)
+  const inferred = inferCategory(title, text, links.length > 0)
+  // Source-provided categories beat inference — except requests, which always win
+  // (Task 4: the main grid must never contain requests).
+  const category = inferred === "request" ? "request" : hintToCategory(entry.catHint) ?? inferred
+  const thumbnail =
+    entry.thumbnail ?? (entry.images.length === 0 ? gdriveThumbFromLinks(links) : null)
   return {
     ...entry,
     title,
     rawTitle: rawTitle.slice(0, 300),
     text,
     links,
+    thumbnail,
     hasLinks: links.length > 0,
-    category: inferCategory(title, text, links.length > 0),
+    category,
   }
 }
 

@@ -115,7 +115,8 @@ export function cleanTitle(title: string): string {
 const VEHICLE_RE =
   /\b(bmw|toyota|porsche|lamborghini|ferrari|audi|nissan|mazda|subaru|honda|ford|chevrolet|corvette|mustang|dodge|jeep|mercedes|benz|volkswagen|\bvw\b|kia|hyundai|tesla|mclaren|bugatti|koenig|pagani|lexus|acura|infiniti|mitsubishi|suzuki|range rover|land rover|rolls-royce|bentley|aston martin|jaguar|alfa romeo|fiat|peugeot|renault|citroen|opel|vauxhall|seat|skoda|volvo|saab|cadillac|lincoln|chrysler|gmc|ram|shelby|hennessey|rtr|car|truck|bus|wagon|coupe|sedan|jdm|drift|gt3|gt-r|supra|skyline|silvia|civic|integra|chaser|mark|altezza|e46|e36|e39|e60|e92|f80|f82|g82|m3|m4|m5|911|cayman|boxster|gallardo|huracan|aventador|chiron|jesko|agera|giulia|stinger|charger|challenger|hellcat|camaro|corolla|ae86|prelude|nsx|rx-?7|rx-?8|s2000|350z|370z|gtr|evo|lancer|wrx|sti|brz|frs|gt86|kei|pickup|hilux|tacoma|f-?150|silverado|sierra|tundra|atv|quad|bike|motorcycle|ute|estate|touring|crossover|suv|van|semitruck|semi)\b/i
 
-const MAP_RE = /\b(\bmap\b|maps|terrain|\btrack\b|\bcity\b|island|jamaica map|location|world|environment)\b/i
+const MAP_RE =
+  /\b(\bmaps?\b|terrain|\btrack\b|\bcity\b|islands?|location|world|environment|open world|backroads|\broads?\b|highway|freeway|interstate|raceway|speedway|\bcircuit\b|drag ?strip|drift track|\bairport\b|jamaica|hawaii|maui|east coast|west coast|jungle rock|sierra nevada|garfield heights|gridmap|hirochi raceway|automation test track|small island)\b/i
 const SKIN_RE = /\b(skin|skins|livery|liveries|paint ?job|\bwrap\b|decals?|texture ?pack|reskin)\b/i
 const PARTS_RE =
   /\b(engine|turbo|wheels?|\btyres?\b|\btires?\b|suspension|exhaust|swap|parts|rims?|bodykit|body kit|spoiler| Tuning |modular|steering wheel|cupholder|fps|booster|pack v)\b/i

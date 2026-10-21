@@ -27,6 +27,8 @@ export interface NormalizedEntry {
   images: string[]
   /** Pre-extracted links; when empty the sync engine falls back to text extraction. */
   links: ExtractedLink[]
+  /** Category directly from the source (e.g. BeamFree "Map") — beats inference. */
+  catHint?: string
 }
 
 const UA =
@@ -137,7 +139,8 @@ export async function fetchBeamfinds(pages = 2): Promise<NormalizedEntry[]> {
       const title = (m.name ?? "").trim()
       if (!title || !m.id) continue
       const thumb = m.thumbnail ? `https://cdn.beamfinds.com/${m.thumbnail}` : null
-      const permalink = `https://beamfinds.com/mods/${m.id}`
+      // Detail pages live at /mod/{id} (singular) — /mods/{id} 404s.
+      const permalink = `https://beamfinds.com/mod/${m.id}`
       const links: ExtractedLink[] = [
         { url: permalink, host: "beamfinds", label: "BeamFinds", decoded: false },
       ]
@@ -188,9 +191,11 @@ export async function fetchBeamfree(): Promise<NormalizedEntry[]> {
 
     // Category chip, e.g. "💰 RLS", "🚗 Vehicles" — emoji + label
     const catRaw = stripTags(card.match(/<span class="ccat">([\s\S]*?)<\/span>/)?.[1] ?? "")
+    // Source-provided category hint: "🗺️ Map" -> "Map", "🚗 Cars" -> "Cars"...
+    const catHint = catRaw.replace(/^[^A-Za-z]*/, "").trim() || undefined
     // Image: /i/{hash}.jpg (fallback /cover/{id} handled by the site itself)
     const img = card.match(/src="(\/i\/[^"]+)"/)?.[1] ?? null
-    const thumb = img ? `https://beamfree.pro${img}` : `https://beamfree.pro/cover/${numId}`
+    const thumb = img ? decodeEntities(`https://beamfree.pro${img}`) : `https://beamfree.pro/cover/${numId}`
 
     // Stats line: size / version / game version → useful text preview
     const stats = [...card.matchAll(/<span class="cs"[^>]*>([\s\S]*?)<\/span>/g)]
@@ -223,6 +228,7 @@ export async function fetchBeamfree(): Promise<NormalizedEntry[]> {
       thumbnail: thumb,
       images: [thumb],
       links,
+      catHint,
     })
   }
 

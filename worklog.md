@@ -112,3 +112,18 @@ Work Log:
 
 Stage Summary:
 - Deliverable: JamFinds now downloads files from the site itself — ModsFire/Google Drive/Pixeldrain/Mediafire/Dropbox/Discord-CDN links stream through /api/download (server resolves the direct URL, Range support, real filename); everything else falls back to opening the host. Requests section (Task 4) unaffected.
+
+---
+Task ID: 6
+Agent: main (Z.ai)
+Task: Fix wrong BeamFinds pages (/mods/{id} -> /mod/{id}), thumbnails for every downloadable mod, Maps undercounted (9 -> 21), per user report.
+
+Work Log:
+- BeamFinds URLs: detail pages live at /mod/{id} (singular) — /mods/{id} 404s (matches user's 404 screenshot). Fixed fetchBeamfinds permalink; live sync loop self-healed all 40 rows (backfill script scripts/fix-beamfinds-urls.ts found 0 remaining). Permalinks + stored links JSON + card Get hrefs + dialog "Open on BeamFinds" all now /mod/.
+- Thumbnails: probed every host for preview images — ModsFire pages have NONE (only generic icons), Modland/Patreon 403 from sandbox, GDrive gives free previews via lh3.googleusercontent.com/d/{id}=w400 (verified). So: (1) sync normalize() now constructs GDrive thumbs for linkful imageless posts; (2) mod-card renders a generated cover (hero-bg glow + category icon tile + serving-host label, hover scale) for every downloadable card without a real image — no more bare car placeholders on downloadable mods; cover host label and card Get button now prefer the first REAL file-host link over "other" links (the http://BeamNG.drive joke links no longer win).
+- Maps undercount: root causes were (a) weak MAP_RE missing road/raceway/city-map titles ("Sumner Road", "East Coast USA Remastered", "HAWAII" landed in other/vehicle) and (b) BeamFree's own category chips ignored. Fixes: MAP_RE extended (roads/backroads/raceway/speedway/circuit/airport/highway/freeway/drag strip/drift track/open world + canonical BeamNG maps east coast, west coast, jungle rock, sierra nevada, garfield heights, gridmap, hirochi raceway, automation test track, small island + hawaii/maui/jamaica); NormalizedEntry.catHint added, fetchBeamfree extracts .ccat ("🗺️ Map" -> map, "🚗 Cars"/"🚛 Semis"/"🛻 Trucks" -> vehicle), sync hintToCategory beats inference except requests still always win (Task 4 preserved); BeamFree thumbnail URLs unescaped (&amp; -> &).
+- Categories self-heal: sync re-normalizes every fetched entry each cycle, so no manual recategorize was needed — map 11 -> 21 within minutes; scan of remaining other/vehicle titles shows 0 map-ish leftovers.
+- Verified: typecheck (only pre-existing sync.ts rawTitle quirks); browser: Maps chip = 21 results, generated cover + host label render, BeamFinds dialog shows /mod/834 + "Opens BeamFinds in a new tab", all-grid cards carry thumbnails, desktop + mobile 390px no overflow, zero console errors. Screenshots download/t6-*.png.
+
+Stage Summary:
+- BeamFinds links everywhere go to the real detail page (/mod/{id}); every downloadable card shows a visual (real cover when available, styled generated cover otherwise); Maps fixed via BeamFree source categories + much stronger map regex; card Get button and cover now resolve to the first genuine file host.

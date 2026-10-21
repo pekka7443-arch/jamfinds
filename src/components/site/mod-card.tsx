@@ -21,6 +21,17 @@ export function categoryMeta(cat: string) {
   return CATEGORY_META[cat] ?? CATEGORY_META.other;
 }
 
+/* Lucide components for the generated covers on cards without images. */
+const BIG_ICONS: Record<string, typeof Car> = {
+  vehicle: Car,
+  map: MapIcon,
+  skin: Package,
+  parts: Wrench,
+  request: HelpCircle,
+  info: Megaphone,
+  other: Info,
+};
+
 export function ModCard({
   mod,
   serverNow,
@@ -72,6 +83,20 @@ export function ModCard({
             onError={() => setImgFailed(true)}
             className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.04]"
           />
+        ) : links.length > 0 ? (
+          /* Generated cover — every downloadable mod gets a proper visual:
+             ambient glow + category icon + the host that serves the file. */
+          <div className="hero-bg flex h-full w-full flex-col items-center justify-center gap-1.5 transition-transform duration-300 ease-out group-hover:scale-[1.03]">
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-border/60 bg-secondary/50">
+              {(() => {
+                const Big = BIG_ICONS[mod.category] ?? Info;
+                return <Big className="h-7 w-7 text-primary/50" aria-hidden="true" />;
+              })()}
+            </span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              {hostStyle((links.find((l) => l.host !== "other") ?? links[0]).host).label}
+            </span>
+          </div>
         ) : (
           <div className="hero-bg flex h-full w-full items-center justify-center">
             <Car className="h-10 w-10 text-muted-foreground/30" aria-hidden="true" />
@@ -112,7 +137,7 @@ export function ModCard({
               <span className="text-[10px] font-medium text-zinc-200">+{links.length - 3}</span>
             )}
             <a
-              href={`/api/download?url=${encodeURIComponent(links[0].url)}&name=${encodeURIComponent(
+              href={`/api/download?url=${encodeURIComponent((links.find((l) => l.host !== "other") ?? links[0]).url)}&name=${encodeURIComponent(
                 mod.title.replace(/[/\\?%*:|<>"\r\n]/g, " ").replace(/\s+/g, " ").trim().slice(0, 80),
               )}`}
               download
