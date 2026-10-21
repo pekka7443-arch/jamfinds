@@ -15,7 +15,13 @@
 
 import { db } from "@/lib/db"
 import { fetchSubredditFeed, htmlToText } from "@/lib/reddit"
-import { fetchBeamfinds, fetchBeamfree, type NormalizedEntry } from "@/lib/scrapers"
+import {
+  fetchBeamfinds,
+  fetchBeamfindsFull,
+  fetchBeamfindsTotal,
+  fetchBeamfree,
+  type NormalizedEntry,
+} from "@/lib/scrapers"
 import { cleanTitle, extractLinks, inferCategory } from "@/lib/links"
 import { SOURCE_DEFS, SOURCES } from "@/lib/sources"
 
@@ -53,14 +59,22 @@ export interface SyncResult {
   error?: string
 }
 
-/** Map a source's own category label (BeamFree "Map", "Cars"...) to our taxonomy. */
+/**
+ * Map a source's own category label to our taxonomy.
+ * Covers BeamFree chips ("Map", "Cars", "Semis"...) and the full BeamFinds
+ * vocabulary ("IRL Vehicle", "Fictional Vehicle", "Parts", "Config",
+ * "Sound Mod", "UI", "Other", legacy "vehicles").
+ */
 function hintToCategory(hint?: string): string | null {
   if (!hint) return null
   const h = hint.toLowerCase()
   if (/\bmap\b|terrain|\btrack\b|location/.test(h)) return "map"
   if (/\bcar\b|vehicle|\bsedan\b|\bcoupe\b|\bsuv\b|\btruck\b|\bsemi\b|\bbus\b|\bbike\b|motorcycle/.test(h)) return "vehicle"
   if (/skin|livery|paint|texture/.test(h)) return "skin"
-  if (/part|tuning|engine|wheel/.test(h)) return "parts"
+  if (/part|tuning|engine|wheel|config/.test(h)) return "parts"
+  if (/sound|audio/.test(h)) return "other"
+  if (/\bui\b|interface|\bhud\b/.test(h)) return "other"
+  if (/\bother\b|\bmisc\b/.test(h)) return "other"
   return null
 }
 
@@ -84,9 +98,11 @@ function normalize(entry: NormalizedEntry): NormalizedEntry & { category: string
   const rawTitle = entry.title
   const title = (isReddit ? cleanTitle(entry.title) || entry.title : entry.title).slice(0, 300)
   const inferred = inferCategory(title, text, links.length > 0)
-  // Source-provided categories beat inference — except requests, which always win
-  // (Task 4: the main grid must never contain requests).
-  const category = inferred === "request" ? "request" : hintToCategory(entry.catHint) ?? inferred
+  // Source-provided categories are authoritative (BeamFinds' own taxonomy,
+  // BeamFree chips) and beat inference — title/body heuristics only apply
+  // when the source doesn't categorize. Web-source catalogs contain real
+  // downloadable mods, never request posts, so hints cannot misfile rows.
+  const category = hintToCategory(entry.catHint) ?? inferred
   const thumbnail =
     entry.thumbnail ?? (entry.images.length === 0 ? gdriveThumbFromLinks(links) : null)
   return {
@@ -176,7 +192,15 @@ async function fetchAllSources(): Promise<{ fetched: number; lastError?: string 
           links: [],
         }))
       } else if (def.key === "BeamFinds") {
-        entries = await fetchBeamfinds(2)
+        // Full catalog sweep when our DB is meaningfully behind BeamFinds
+        // (first run / long downtime), cheap newest-first top-up otherwise.
+        // Quick mode still catches day-to-day uploads (50/page, newest first).
+        const total = await fetchBeamfindsTotal()
+        const have = await db.mod.count({ where: { source: "BeamFinds" } })
+        entries =
+          total != null && have < total - 10
+            ? await fetchBeamfindsFull()
+            : await fetchBeamfinds(2)
       } else if (def.key === "BeamFree") {
         entries = await fetchBeamfree()
       }
