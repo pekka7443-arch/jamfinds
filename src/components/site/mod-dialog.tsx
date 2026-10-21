@@ -42,7 +42,7 @@ export function ModDialog({ mod, open, onOpenChange }: { mod: ModItem | null; op
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="nice-scroll max-h-[85vh] max-w-2xl overflow-y-auto border-border bg-popover">
+      <DialogContent className="nice-scroll max-h-[85vh] max-w-2xl overflow-y-auto rounded-xl! border-border bg-popover/90 backdrop-blur-xl">
         <DialogHeader>
           <div className="flex flex-wrap items-center gap-2 pr-6">
             {cat && (
@@ -138,10 +138,10 @@ export function ModDialog({ mod, open, onOpenChange }: { mod: ModItem | null; op
                   </div>
                   <div className="flex shrink-0 gap-1.5">
                     <Button size="sm" variant="outline" className="h-9 gap-1 sm:h-8" onClick={() => copy(l.url, l.url)}>
-                      {copied === l.url ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copied === l.url ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
                       {copied === l.url ? "Copied" : "Copy"}
                     </Button>
-                    <Button size="sm" className="h-9 gap-1 bg-emerald-600 hover:bg-emerald-500 sm:h-8" asChild>
+                    <Button size="sm" className="h-9 gap-1 bg-primary text-primary-foreground hover:bg-primary/90 sm:h-8" asChild>
                       <a href={l.url} target="_blank" rel="noreferrer nofollow">
                         <ExternalLink className="h-3.5 w-3.5" /> Open
                       </a>
@@ -155,14 +155,14 @@ export function ModDialog({ mod, open, onOpenChange }: { mod: ModItem | null; op
 
         {/* Source actions */}
         <div className="flex flex-wrap gap-2 border-t border-border pt-3">
-          <Button className="gap-1.5 bg-orange-600 hover:bg-orange-500" asChild>
+          <Button variant="outline" className="gap-1.5" asChild>
             <a href={mod.permalink} target="_blank" rel="noreferrer">
               {isReddit ? <ExternalLink className="h-4 w-4" /> : <Globe className="h-4 w-4" />}
               {isReddit ? "Open on Reddit" : `Open on ${src?.label ?? "source site"}`}
             </a>
           </Button>
           <Button variant="outline" className="gap-1.5" onClick={() => copy(mod.permalink, "src")}>
-            {copied === "src" ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+            {copied === "src" ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
             {copied === "src" ? "Copied" : "Copy link"}
           </Button>
         </div>

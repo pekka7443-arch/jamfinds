@@ -30,7 +30,7 @@ export const SOURCE_DEFS: SourceDef[] = [
     label: "r/Beamng_Jamaica",
     url: "https://www.reddit.com/r/Beamng_Jamaica/",
     dot: "bg-emerald-400",
-    chip: "border-emerald-500/35 bg-emerald-500/10 text-emerald-300",
+    chip: "badge-tint cat-vehicle",
   },
   {
     key: "BeamNGpiratemods",
@@ -38,7 +38,7 @@ export const SOURCE_DEFS: SourceDef[] = [
     label: "r/BeamNGpiratemods",
     url: "https://www.reddit.com/r/BeamNGpiratemods/",
     dot: "bg-orange-400",
-    chip: "border-orange-500/35 bg-orange-500/10 text-orange-300",
+    chip: "badge-tint host-onedrive",
   },
   {
     key: "beamng_leakedmods",
@@ -46,7 +46,7 @@ export const SOURCE_DEFS: SourceDef[] = [
     label: "r/beamng_leakedmods",
     url: "https://www.reddit.com/r/beamng_leakedmods/",
     dot: "bg-rose-400",
-    chip: "border-rose-500/35 bg-rose-500/10 text-rose-300",
+    chip: "badge-tint cat-request",
   },
   {
     key: "BeamNG_Leaked_M0ds",
@@ -54,7 +54,7 @@ export const SOURCE_DEFS: SourceDef[] = [
     label: "r/BeamNG_Leaked_M0ds",
     url: "https://www.reddit.com/r/BeamNG_Leaked_M0ds/",
     dot: "bg-fuchsia-400",
-    chip: "border-fuchsia-500/35 bg-fuchsia-500/10 text-fuchsia-300",
+    chip: "badge-tint cat-skin",
   },
   {
     key: "BeamFinds",
@@ -62,7 +62,7 @@ export const SOURCE_DEFS: SourceDef[] = [
     label: "BeamFinds",
     url: "https://beamfinds.com/",
     dot: "bg-cyan-400",
-    chip: "border-cyan-500/35 bg-cyan-500/10 text-cyan-300",
+    chip: "badge-tint host-pixeldrain",
   },
   {
     key: "BeamFree",
@@ -70,7 +70,7 @@ export const SOURCE_DEFS: SourceDef[] = [
     label: "BeamFree",
     url: "https://beamfree.pro/",
     dot: "bg-violet-400",
-    chip: "border-violet-500/35 bg-violet-500/10 text-violet-300",
+    chip: "badge-tint host-beamfree",
   },
 ];
 

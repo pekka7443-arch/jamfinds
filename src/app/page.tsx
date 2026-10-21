@@ -165,16 +165,16 @@ export default function Home() {
           {/* How it works ribbon */}
           <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border bg-card/50 px-3.5 py-2.5 text-xs text-muted-foreground sm:mb-5">
             <span className="inline-flex items-center gap-1.5">
-              <Satellite className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" /> Auto-syncs all 6 sources every
+              <Satellite className="h-3.5 w-3.5 text-primary" aria-hidden="true" /> Auto-syncs all 6 sources every
               minute
             </span>
-            <span className="hidden text-border sm:inline">|</span>
+            <span className="hidden text-foreground/15 sm:inline">|</span>
             <span>Client polls every {POLL_MS / 1000}s — new finds pop a toast</span>
-            <span className="hidden text-border sm:inline">|</span>
+            <span className="hidden text-foreground/15 sm:inline">|</span>
             <span>Base64 mod codes are decoded automatically</span>
             {dataUpdatedAt > 0 && (
               <>
-                <span className="hidden text-border md:inline">|</span>
+                <span className="hidden text-foreground/15 md:inline">|</span>
                 <span className="hidden md:inline">last checked {new Date(dataUpdatedAt).toLocaleTimeString()}</span>
               </>
             )}
@@ -199,13 +199,13 @@ export default function Home() {
               ))}
             </div>
           ) : isError ? (
-            <div className="flex flex-col items-center gap-3 rounded-xl border border-red-500/30 bg-red-500/5 p-10 text-center sm:p-12">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/15">
-                <WifiOff className="h-6 w-6 text-red-400" aria-hidden="true" />
+            <div className="flex flex-col items-center gap-3 rounded-xl border border-destructive/25 bg-destructive/5 p-10 text-center sm:p-12">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/15">
+                <WifiOff className="h-6 w-6 text-destructive" aria-hidden="true" />
               </span>
               <div>
                 <p className="tt-h2 text-foreground">Couldn&apos;t load mods</p>
-                <p className="mt-1 text-sm text-red-300">
+                <p className="mt-1 text-sm text-destructive">
                   {(error as Error)?.message ?? "unknown error"} — check your connection and try again.
                 </p>
               </div>
@@ -214,12 +214,12 @@ export default function Home() {
               </Button>
             </div>
           ) : initialSyncing ? (
-            <div className="flex flex-col items-center gap-4 rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-10 text-center sm:p-12">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/15">
-                <Satellite className="h-6 w-6 animate-pulse text-emerald-400" aria-hidden="true" />
+            <div className="flex flex-col items-center gap-4 rounded-xl border border-primary/25 bg-primary/5 p-10 text-center sm:p-12">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15">
+                <Satellite className="h-6 w-6 animate-pulse text-primary" aria-hidden="true" />
               </span>
               <div>
-                <p className="tt-h2 text-emerald-300">Connecting to sources…</p>
+                <p className="tt-h2 text-primary">Connecting to sources…</p>
                 <p className="mx-auto mt-1.5 max-w-md text-sm leading-relaxed text-muted-foreground">
                   JamFinds is pulling the latest posts from 4 subreddits, BeamFinds and BeamFree right now. The first
                   sync takes a few seconds — this page will fill up automatically.

@@ -35,7 +35,7 @@ export function Filters({ query, onQueryChange, filters, onChange, data, resultC
   const isFiltered = filters.cat !== "all" || filters.withLinks || filters.source !== "all" || query.trim() !== "";
 
   return (
-    <div className="rounded-xl border border-border bg-card/60 p-3 shadow-sm sm:p-4">
+    <div className="surface-card rounded-xl bg-card/60 p-3 sm:p-4">
       {/* Row 1 — search + controls */}
       <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
         <div className="relative min-w-0 flex-1">

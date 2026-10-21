@@ -24,7 +24,7 @@ function StatCard({
   accent: string;
 }) {
   return (
-    <div className="flex flex-col gap-1 rounded-xl border border-border bg-card/70 p-4">
+    <div className="surface-card flex flex-col gap-1 rounded-xl bg-card/70 p-4">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <span className={`inline-flex h-6 w-6 items-center justify-center rounded-md ${accent}`} aria-hidden="true">
           {icon}
@@ -41,7 +41,7 @@ function StatCard({
 
 export function Hero({ data, isLoading }: HeroProps) {
   return (
-    <section className="hero-bg border-b border-border/60">
+    <section className="hero-bg border-b border-border">
       <div className="mx-auto max-w-7xl px-4 pb-8 pt-10 sm:px-6">
         <div className="flex flex-col items-start gap-3">
           <span className="inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-semibold text-gold">
@@ -61,11 +61,11 @@ export function Hero({ data, isLoading }: HeroProps) {
 
         <div className="mt-7 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <StatCard
-            icon={<Database className="h-3.5 w-3.5 text-emerald-400" />}
+            icon={<Database className="h-3.5 w-3.5 text-primary" />}
             label="Mods indexed"
             value={isLoading ? "…" : data?.stats.total ?? 0}
             hint={`from ${data?.stats.sources.length ?? 0} source${(data?.stats.sources.length ?? 0) === 1 ? "" : "s"}`}
-            accent="bg-emerald-500/15"
+            accent="bg-primary/15"
           />
           <StatCard
             icon={<Clock3 className="h-3.5 w-3.5 text-gold" />}
@@ -75,18 +75,18 @@ export function Hero({ data, isLoading }: HeroProps) {
             accent="bg-gold/15"
           />
           <StatCard
-            icon={<Unlock className="h-3.5 w-3.5 text-amber-400" />}
+            icon={<Unlock className="h-3.5 w-3.5 text-primary" />}
             label="Ready to download"
             value={isLoading ? "…" : data?.stats.withLinks ?? 0}
             hint="links found & decoded"
-            accent="bg-amber-500/15"
+            accent="bg-primary/15"
           />
           <StatCard
-            icon={<Car className="h-3.5 w-3.5 text-emerald-400" />}
+            icon={<Car className="h-3.5 w-3.5 text-gold" />}
             label="Last sync"
             value={data?.sync.lastSyncAt ? <RelativeTime iso={data.sync.lastSyncAt} /> : isLoading ? "…" : "—"}
             hint={`across ${SOURCE_DEFS.length} sources, every minute`}
-            accent="bg-emerald-500/15"
+            accent="bg-gold/15"
           />
         </div>
       </div>

@@ -47,7 +47,7 @@ export function ModCard({
 
   return (
     <article
-      className={`card-in group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-xl border border-border bg-card/80 shadow-sm outline-none transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-black/25 focus-visible:ring-2 focus-visible:ring-ring active:translate-y-0 active:scale-[0.995] ${
+      className={`card-in surface-card surface-card-hover group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-xl bg-card/80 outline-none transition-all duration-200 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring active:translate-y-0 active:scale-[0.995] ${
         fresh ? "fresh-card" : ""
       }`}
       onClick={() => onOpen(mod)}

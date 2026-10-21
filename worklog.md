@@ -59,3 +59,21 @@ Work Log:
 Stage Summary:
 - ALL 6 SOURCES LIVE: 376 mods indexed / 171 with links — Beamng_Jamaica 100, beamng_leakedmods 100, BeamNG_Leaked_M0ds 100, BeamNGpiratemods 15, BeamFinds 40, BeamFree 21.
 - Browser-verified BeamFinds card dialog ("Open on BeamFinds" source-aware action). Hero shows "from 6 sources", toolbar "376 results".
+
+---
+Task ID: 3
+Agent: main (Z.ai)
+Task: Visual-only design polish — colors, background depth, surface effects. No layout restructuring, no new components, no functionality changes.
+
+Work Log:
+- Palette retuned in globals.css on a single neutral hue (oklch 165, deep green-teal) as an explicit 4-layer ladder: background 0.15 → card 0.205 → popover 0.24 (fixed old popover-darker-than-card inversion) → secondary 0.275 / accent 0.30. Borders softened 10%→7% white, input 14%→12%; muted-foreground 0.735 (~8:1 AA). Theme color meta updated to #070d0a.
+- Ambient page depth: fixed body::before with 4 soft radial glows (brand green top-center, gold top-right, cool blue left, green bottom-right) + body::after with faint SVG feTurbulence grain (4% opacity, grayscale); body gets isolation:isolate so negative-z pseudos paint above bg, below content. Pure CSS, zero components, pointer-events none.
+- Elevation recipe: .surface-card (inset top highlight + 2-layer soft shadow) and .surface-card-hover (green-tinted border, deeper shadow, soft 28px brand glow) applied to mod cards, hero stat cards, filter toolbar. Harsh outlines/shadow-sm/gray hover shadows removed.
+- Badge system: new .badge-tint oklch recipe (same L/C/border-alpha for every badge, only --bh hue varies) + .cat-* and .host-* hue classes; CATEGORY_STYLES/HOST_STYLES in types.ts now emit badge-tint classes; source chips in sources.ts aligned to the same family.
+- Accent consolidation to exactly two brand accents: primary green (buttons, links, LIVE, icons, focus) + gold (NEW, decoded, 24h, last-sync). Replaced dialog emerald-600/orange-600 buttons with primary token + neutral outline; header LIVE badge, footer hover/heart, page state panels (error→destructive tokens, connecting→primary tokens), stat icons alternated green/gold.
+- Glass: header backdrop-blur-md → blur-lg + saturate-150 with /80→/55 (supports fallback kept); DialogContent now bg-popover/90 + backdrop-blur-xl + rounded-xl. hero-bg glow widened/layered; ::selection brand green; scrollbar thumb re-hued to 165.
+- Verified via agent-browser: desktop 1440 + mobile 390 (no horizontal overflow), card hover lift+glow, dialog glass + accent buttons, badge family (Vehicle green / Request coral / BeamFree violet) all in one tonal family, zero page errors. Saved 5 verification screenshots to download/visual-check-*.png.
+
+Stage Summary:
+- Deliverable: same site, refined visual system — intentional single-hue dark palette with clear layer separation, ambient glow+grain depth, soft elevation surfaces, two-accent brand color story, hue-var badge family, glassy header/dialog. No functional or layout changes; all behavior identical.
+

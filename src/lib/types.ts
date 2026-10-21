@@ -74,21 +74,22 @@ export interface HostStyle {
   className: string;
 }
 
-/* One cohesive badge recipe: 35% border, 12% fill, 300-level text. */
+/* One badge-tint recipe (globals.css): identical L/C/border-alpha per badge,
+ * only the hue class differs — badges stay in one harmonious family. */
 export const HOST_STYLES: Record<string, HostStyle> = {
-  modsfire: { label: "Modsfire", className: "border-amber-500/35 bg-amber-500/12 text-amber-300" },
-  mediafire: { label: "Mediafire", className: "border-sky-500/35 bg-sky-500/12 text-sky-300" },
-  gdrive: { label: "Google Drive", className: "border-emerald-500/35 bg-emerald-500/12 text-emerald-300" },
-  discord: { label: "Discord", className: "border-violet-500/35 bg-violet-500/12 text-violet-300" },
-  mega: { label: "MEGA", className: "border-rose-500/35 bg-rose-500/12 text-rose-300" },
-  workupload: { label: "Workupload", className: "border-teal-500/35 bg-teal-500/12 text-teal-300" },
-  sharemods: { label: "ShareMods", className: "border-lime-500/35 bg-lime-500/12 text-lime-300" },
-  pixeldrain: { label: "Pixeldrain", className: "border-cyan-500/35 bg-cyan-500/12 text-cyan-300" },
-  onedrive: { label: "OneDrive", className: "border-orange-500/35 bg-orange-500/12 text-orange-300" },
-  dropbox: { label: "Dropbox", className: "border-orange-500/35 bg-orange-500/12 text-orange-300" },
-  beamfinds: { label: "BeamFinds", className: "border-cyan-500/35 bg-cyan-500/12 text-cyan-300" },
-  beamfree: { label: "BeamFree", className: "border-violet-500/35 bg-violet-500/12 text-violet-300" },
-  other: { label: "Link", className: "border-zinc-500/35 bg-zinc-500/12 text-zinc-300" },
+  modsfire: { label: "Modsfire", className: "badge-tint host-modsfire" },
+  mediafire: { label: "Mediafire", className: "badge-tint host-mediafire" },
+  gdrive: { label: "Google Drive", className: "badge-tint host-gdrive" },
+  discord: { label: "Discord", className: "badge-tint host-discord" },
+  mega: { label: "MEGA", className: "badge-tint host-mega" },
+  workupload: { label: "Workupload", className: "badge-tint host-workupload" },
+  sharemods: { label: "ShareMods", className: "badge-tint host-sharemods" },
+  pixeldrain: { label: "Pixeldrain", className: "badge-tint host-pixeldrain" },
+  onedrive: { label: "OneDrive", className: "badge-tint host-onedrive" },
+  dropbox: { label: "Dropbox", className: "badge-tint host-dropbox" },
+  beamfinds: { label: "BeamFinds", className: "badge-tint host-beamfinds" },
+  beamfree: { label: "BeamFree", className: "badge-tint host-beamfree" },
+  other: { label: "Link", className: "badge-tint host-other" },
 };
 
 export function hostStyle(host: string): HostStyle {
@@ -107,17 +108,18 @@ export const CATEGORIES: { key: string; label: string }[] = [
 ];
 
 /**
- * Category color system — one recipe (35% border, 12% fill, 300-level text)
- * with seven well-separated hues so chips stay distinguishable but harmonious.
+ * Category color system — one badge-tint recipe (globals.css) with seven
+ * well-separated hues sharing identical lightness/chroma/border-alpha,
+ * so chips stay distinguishable but read as one family.
  * Shared by filter chips and card badges.
  */
 export const CATEGORY_STYLES: Record<string, string> = {
-  all: "border-emerald-500/35 bg-emerald-500/12 text-emerald-300",
-  vehicle: "border-emerald-500/35 bg-emerald-500/12 text-emerald-300",
-  map: "border-teal-500/35 bg-teal-500/12 text-teal-300",
-  skin: "border-fuchsia-500/35 bg-fuchsia-500/12 text-fuchsia-300",
-  parts: "border-amber-500/35 bg-amber-500/12 text-amber-300",
-  request: "border-rose-500/35 bg-rose-500/12 text-rose-300",
-  info: "border-sky-500/35 bg-sky-500/12 text-sky-300",
-  other: "border-zinc-500/35 bg-zinc-500/12 text-zinc-300",
+  all: "badge-tint cat-vehicle",
+  vehicle: "badge-tint cat-vehicle",
+  map: "badge-tint cat-map",
+  skin: "badge-tint cat-skin",
+  parts: "badge-tint cat-parts",
+  request: "badge-tint cat-request",
+  info: "badge-tint cat-info",
+  other: "badge-tint cat-other",
 };

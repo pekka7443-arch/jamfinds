@@ -85,43 +85,54 @@
 
 /*
  * Dark palette — the site's only active theme (hardcoded on <html>).
- * Tuned for WCAG AA: foreground on background ≈ 15:1, muted-foreground
- * ≈ 8.5:1, all badge text-*-300 colors ≥ 4.5:1 on their 12% fills.
+ *
+ * One intentional 4-layer surface ladder on a single neutral hue (165,
+ * a deep green-teal cast that stays in the brand family without muddiness):
+ *   background 0.15  →  card 0.205  →  popover 0.24  →  secondary/accent 0.275+
+ * Each step is clearly lighter than the last, so page / card / elevated
+ * read as distinct planes. Borders are low-opacity white (7%) instead of
+ * hard gray lines; text tiers: foreground 0.965 (≈15:1), muted 0.735 (≈8:1),
+ * both pass WCAG AA comfortably.
+ *
+ * Accent strategy: exactly two brand accents — green (primary, hue 152)
+ * for actions/links/live state, gold (hue 95) for freshness/decoded/NEW.
+ * Category & host badges share one oklch recipe (badge-tint) differing
+ * only in hue, so every badge sits in the same tonal family.
  */
 .dark {
-  --background: oklch(0.155 0.009 165);
-  --foreground: oklch(0.965 0.004 140);
-  --card: oklch(0.198 0.011 165);
-  --card-foreground: oklch(0.965 0.004 140);
-  --popover: oklch(0.19 0.011 165);
-  --popover-foreground: oklch(0.965 0.004 140);
-  --primary: oklch(0.755 0.19 152);
-  --primary-foreground: oklch(0.14 0.02 160);
-  --secondary: oklch(0.25 0.012 165);
-  --secondary-foreground: oklch(0.965 0.004 140);
-  --muted: oklch(0.25 0.012 165);
-  --muted-foreground: oklch(0.72 0.014 155);
-  --accent: oklch(0.26 0.014 165);
-  --accent-foreground: oklch(0.965 0.004 140);
+  --background: oklch(0.15 0.01 165);
+  --foreground: oklch(0.965 0.005 160);
+  --card: oklch(0.205 0.012 165);
+  --card-foreground: oklch(0.965 0.005 160);
+  --popover: oklch(0.24 0.013 165);
+  --popover-foreground: oklch(0.965 0.005 160);
+  --primary: oklch(0.77 0.16 152);
+  --primary-foreground: oklch(0.16 0.04 152);
+  --secondary: oklch(0.275 0.014 165);
+  --secondary-foreground: oklch(0.965 0.005 160);
+  --muted: oklch(0.245 0.012 165);
+  --muted-foreground: oklch(0.735 0.014 160);
+  --accent: oklch(0.3 0.016 165);
+  --accent-foreground: oklch(0.965 0.005 160);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.755 0.19 152);
+  --border: oklch(1 0 0 / 7%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.77 0.16 152);
   --gold: oklch(0.865 0.165 95);
-  --jam-green: oklch(0.755 0.19 152);
-  --chart-1: oklch(0.755 0.19 152);
+  --jam-green: oklch(0.77 0.16 152);
+  --chart-1: oklch(0.77 0.16 152);
   --chart-2: oklch(0.865 0.165 95);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.198 0.011 165);
-  --sidebar-foreground: oklch(0.965 0.004 140);
-  --sidebar-primary: oklch(0.755 0.19 152);
-  --sidebar-primary-foreground: oklch(0.14 0.02 160);
-  --sidebar-accent: oklch(0.26 0.014 165);
-  --sidebar-accent-foreground: oklch(0.965 0.004 140);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.755 0.19 152);
+  --sidebar: oklch(0.205 0.012 165);
+  --sidebar-foreground: oklch(0.965 0.005 160);
+  --sidebar-primary: oklch(0.77 0.16 152);
+  --sidebar-primary-foreground: oklch(0.16 0.04 152);
+  --sidebar-accent: oklch(0.3 0.016 165);
+  --sidebar-accent-foreground: oklch(0.965 0.005 160);
+  --sidebar-border: oklch(1 0 0 / 7%);
+  --sidebar-ring: oklch(0.77 0.16 152);
 }
 
 @layer base {
@@ -131,7 +142,42 @@
   body {
     @apply bg-background text-foreground;
     overflow-x: hidden;
+    /* promote body to a stacking context so the fixed ambient layers
+       (z-index -1) paint above the body background, below all content */
+    isolation: isolate;
   }
+  ::selection {
+    background-color: oklch(0.77 0.16 152 / 30%);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Ambient page background — soft depth, zero components               */
+/* Two fixed pseudo-layers: wide radial glows + a faint film grain.    */
+/* Both sit behind all content (z-index -1) and never intercept input. */
+/* ------------------------------------------------------------------ */
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(55rem 34rem at 50% -12rem, oklch(0.62 0.13 158 / 0.11), transparent 62%),
+    radial-gradient(44rem 30rem at 86% -6rem, oklch(0.8 0.14 100 / 0.05), transparent 64%),
+    radial-gradient(46rem 30rem at -8% 26%, oklch(0.6 0.09 210 / 0.045), transparent 60%),
+    radial-gradient(40rem 28rem at 108% 78%, oklch(0.62 0.11 158 / 0.04), transparent 62%);
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 /* ------------------------------------------------------------------ */
@@ -182,6 +228,75 @@
 }
 
 /* ------------------------------------------------------------------ */
+/* Surface elevation — one cohesive shadow recipe instead of harsh     */
+/* outlines. Inset top highlight fakes light from above; two soft      */
+/* ambient shadows lift the card off the page. The hover variant adds  */
+/* a gentle brand-green glow + deeper shadow. Pure paint, no layout.   */
+/* ------------------------------------------------------------------ */
+
+.surface-card {
+  border: 1px solid oklch(1 0 0 / 6.5%);
+  box-shadow:
+    inset 0 1px 0 0 oklch(1 0 0 / 4%),
+    0 1px 2px oklch(0 0 0 / 20%),
+    0 12px 32px -16px oklch(0 0 0 / 35%);
+}
+
+.surface-card-hover {
+  transition-property: transform, border-color, box-shadow, background-color;
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.22, 0.9, 0.3, 1);
+}
+
+.surface-card-hover:hover {
+  border-color: oklch(0.77 0.16 152 / 30%);
+  box-shadow:
+    inset 0 1px 0 0 oklch(1 0 0 / 4.5%),
+    0 2px 6px oklch(0 0 0 / 22%),
+    0 18px 44px -18px oklch(0 0 0 / 48%),
+    0 0 28px -8px oklch(0.72 0.14 152 / 18%);
+}
+
+/* ------------------------------------------------------------------ */
+/* Badge tint system — categories, hosts and source chips all share    */
+/* ONE recipe: same lightness, same chroma, same border alpha; only    */
+/* the hue (--bh) differs. Result: distinguishable badges that still   */
+/* read as one family instead of random saturated Tailwind hues.       */
+/* ------------------------------------------------------------------ */
+
+.badge-tint {
+  --bh: 165;
+  --bc: 0.11;
+  border-color: oklch(0.75 var(--bc) var(--bh) / 26%);
+  background-color: oklch(0.7 var(--bc) var(--bh) / 13%);
+  color: oklch(0.84 var(--bc) var(--bh));
+}
+
+/* categories */
+.cat-vehicle { --bh: 152; }
+.cat-map { --bh: 200; }
+.cat-skin { --bh: 330; }
+.cat-parts { --bh: 90; }
+.cat-request { --bh: 22; }
+.cat-info { --bh: 245; }
+.cat-other { --bh: 270; --bc: 0.028; }
+
+/* file hosts */
+.host-modsfire { --bh: 75; }
+.host-mediafire { --bh: 245; }
+.host-gdrive { --bh: 152; }
+.host-discord { --bh: 290; }
+.host-mega { --bh: 15; }
+.host-workupload { --bh: 195; }
+.host-sharemods { --bh: 130; }
+.host-pixeldrain { --bh: 210; }
+.host-onedrive { --bh: 60; }
+.host-dropbox { --bh: 60; }
+.host-beamfinds { --bh: 210; }
+.host-beamfree { --bh: 290; }
+.host-other { --bh: 270; --bc: 0.028; }
+
+/* ------------------------------------------------------------------ */
 /* Theme helpers                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -209,16 +324,24 @@
   color: transparent;
 }
 
-/* live pulse dot */
+/* hero glow — wider, softer, layered with the page ambient behind it */
+.hero-bg {
+  background:
+    radial-gradient(68% 110% at 50% -22%, oklch(0.64 0.14 155 / 0.14), transparent 60%),
+    radial-gradient(42% 80% at 88% -12%, oklch(0.83 0.13 100 / 0.07), transparent 58%),
+    radial-gradient(44% 90% at 4% 6%, oklch(0.66 0.1 205 / 0.05), transparent 62%);
+}
+
+/* live pulse dot — keyed to the primary green */
 @keyframes live-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(46, 224, 111, 0.55);
+    box-shadow: 0 0 0 0 rgba(85, 209, 128, 0.5);
   }
   70% {
-    box-shadow: 0 0 0 7px rgba(46, 224, 111, 0);
+    box-shadow: 0 0 0 7px rgba(85, 209, 128, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(46, 224, 111, 0);
+    box-shadow: 0 0 0 0 rgba(85, 209, 128, 0);
   }
 }
 .live-dot {
@@ -272,11 +395,11 @@
   background: transparent;
 }
 .nice-scroll::-webkit-scrollbar-thumb {
-  background: oklch(0.38 0.02 160);
+  background: oklch(0.4 0.012 165);
   border-radius: 8px;
 }
 .nice-scroll::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.48 0.03 160);
+  background: oklch(0.5 0.015 165);
 }
 
 /* mobile chip rail: scrollable but with no visible scrollbar */
@@ -286,11 +409,4 @@
 }
 .no-scrollbar::-webkit-scrollbar {
   display: none;
-}
-
-/* grid backdrop with subtle green glow */
-.hero-bg {
-  background:
-    radial-gradient(60% 90% at 50% -10%, rgba(0, 155, 58, 0.16), transparent 60%),
-    radial-gradient(40% 60% at 85% 0%, rgba(254, 209, 0, 0.07), transparent 60%);
 }

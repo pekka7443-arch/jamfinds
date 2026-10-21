@@ -24,7 +24,7 @@ export function Footer() {
                   href={s.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1 transition-colors hover:text-emerald-300"
+                  className="inline-flex items-center gap-1 transition-colors hover:text-primary"
                 >
                   <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} aria-hidden="true" />
                   {s.label}
@@ -34,7 +34,7 @@ export function Footer() {
             </p>
           </div>
           <div className="inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
-            made with <Heart className="h-3 w-3 text-emerald-400" aria-hidden="true" /> for the BeamNG community
+            made with <Heart className="h-3 w-3 text-primary" aria-hidden="true" /> for the BeamNG community
           </div>
         </div>
       </div>
