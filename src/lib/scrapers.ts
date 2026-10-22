@@ -10,8 +10,14 @@
  *    "Sound Mod", "UI", "Other" + legacy lowercase "vehicles".
  *    Thumbnails/images are served from https://cdn.beamfinds.com/{path}.
  *
- *  - BeamFree (beamfree.pro): server-rendered homepage with <a class="card" href="/mod/N">
+ *  - BeamFree (beamfree.pro): server-rendered listing pages (/, /mods?page=N,
+ *    /mods?category=<key>&page=N) built from <a class="card" href="/mod/N">
  *    blocks containing .cimg/.ctitle/.ccreator/.ccat/.cstats markup.
+ *    robots.txt allows "/" and disallows /api/ — only public HTML pages are
+ *    scraped, never API endpoints; listings carry no timestamps, so sync
+ *    keeps first-seen as publishedAt. Detail pages add a description +
+ *    gallery images (the JS-gated /dl/ endpoint is deliberately NOT used —
+ *    JamFinds links to the original mod page instead of mirroring files).
  *
  * Both return the same NormalizedEntry shape the sync engine upserts.
  */
@@ -424,16 +430,46 @@ async function fetchBeamfindsLegacy(pages: number): Promise<NormalizedEntry[]> {
 }
 
 /* ------------------------------------------------------------------ */
-/* BeamFree (server-rendered homepage cards)                           */
+/* BeamFree (server-rendered listing pages)                            */
 /* ------------------------------------------------------------------ */
 
 function stripTags(s: string): string {
   return decodeEntities(s.replace(/<[^>]+>/g, " ")).replace(/\s{2,}/g, " ").trim()
 }
 
-/** Parse the beamfree.pro homepage into mod entries. */
-export async function fetchBeamfree(): Promise<NormalizedEntry[]> {
-  const html = await get("https://beamfree.pro/", "text/html")
+/** Description HTML -> plain text that KEEPS line breaks (stripTags would
+ * collapse them — descriptions are multi-paragraph changelogs). */
+function descToText(html: string): string {
+  const text = decodeEntities(
+    html
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/(p|div|li|h[1-6])>/gi, "\n")
+      .replace(/<[^>]+>/g, " "),
+  )
+  return text
+    .split("\n")
+    .map((line) => line.replace(/[\t ]{2,}/g, " ").trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+}
+
+/** Fetch a beamfree.pro page: native fetch first, curl fallback (same
+ * TLS-fingerprint resilience as the BeamFinds path). */
+export async function fetchBeamfreePage(url: string, timeoutMs = 20_000): Promise<string> {
+  try {
+    return await get(url, "text/html", timeoutMs)
+  } catch (fetchErr) {
+    try {
+      return await curlGet(url, "text/html", timeoutMs)
+    } catch {
+      throw fetchErr // surface the more-informative fetch error
+    }
+  }
+}
+
+/** Parse any beamfree.pro page (homepage or /mods listing) into entries. */
+export function parseBeamfreeCards(html: string): NormalizedEntry[] {
   const out: NormalizedEntry[] = []
   const seen = new Set<string>()
 
@@ -494,6 +530,112 @@ export async function fetchBeamfree(): Promise<NormalizedEntry[]> {
   }
 
   return out
+}
+
+/** Homepage (curated mix incl. older "High Detail" picks). */
+export async function fetchBeamfree(): Promise<NormalizedEntry[]> {
+  const html = await fetchBeamfreePage("https://beamfree.pro/")
+  return parseBeamfreeCards(html)
+}
+
+/** Newest-first first page of the full /mods index — the recurring top-up
+ * path that catches fresh uploads between sweeps. */
+export async function fetchBeamfreeNew(): Promise<NormalizedEntry[]> {
+  const html = await fetchBeamfreePage("https://beamfree.pro/mods?page=1")
+  return parseBeamfreeCards(html)
+}
+
+/** Cards per /mods page (verified on the live site; out-of-range pages CLAMP
+ * to the last page instead of returning empty, so sweeps must stop on the
+ * pager's max page number, never on "0 cards"). */
+const BF_PAGE_SIZE = 20
+/** Hard cap on pages swept — a misbehaving pager must never loop forever. */
+const BF_MAX_PAGES = 60
+
+/** Highest page number the /mods pager advertises, or null. */
+function parseBeamfreeMaxPage(html: string): number | null {
+  const nums = [...html.matchAll(/\/mods\?page=(\d+)/g)].map((m) => Number(m[1]))
+  return nums.length ? Math.max(...nums) : null
+}
+
+/**
+ * Catalog size probe, computed exactly like BeamFinds' fetchBeamfindsTotal:
+ * (maxPage - 1) * pageSize + cards on the last page. Two requests, or one
+ * when the pager is missing. Returns null when the site is unreachable or
+ * the page-size assumption breaks — the sync engine then falls back to the
+ * cheap top-up instead of sweeping.
+ */
+export async function fetchBeamfreeTotal(): Promise<number | null> {
+  try {
+    const first = await fetchBeamfreePage("https://beamfree.pro/mods?page=1")
+    const firstCards = parseBeamfreeCards(first)
+    const max = parseBeamfreeMaxPage(first)
+    if (max == null || max <= 1) return firstCards.length
+    const capped = Math.min(max, BF_MAX_PAGES)
+    const last = await fetchBeamfreePage(`https://beamfree.pro/mods?page=${capped}`)
+    const lastCards = parseBeamfreeCards(last)
+    if (lastCards.length > BF_PAGE_SIZE) return null // page size changed — don't guess
+    return (capped - 1) * BF_PAGE_SIZE + lastCards.length
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Full catalog sweep over /mods (the complete newest-first index — category
+ * listings are subsets of it). Stops on the pager's max page, a network
+ * error, or the hard cap. Partial results are still returned: one flaky
+ * page must not discard hundreds of good ones.
+ */
+export async function fetchBeamfreeFull(): Promise<NormalizedEntry[]> {
+  const byId = new Map<string, NormalizedEntry>()
+  for (let p = 1; p <= BF_MAX_PAGES; p++) {
+    let html: string
+    try {
+      html = await fetchBeamfreePage(`https://beamfree.pro/mods?page=${p}`)
+    } catch {
+      break // network trouble ends the sweep; keep what we already have
+    }
+    const cards = parseBeamfreeCards(html)
+    for (const e of cards) if (!byId.has(e.id)) byId.set(e.id, e)
+    const max = parseBeamfreeMaxPage(html)
+    if (cards.length === 0 || (max != null && p >= Math.min(max, BF_MAX_PAGES))) break
+    await sleep(1_100) // polite gap — BeamFree's terms forbid harmful scraping
+  }
+  return [...byId.values()]
+}
+
+export interface BeamfreeDetail {
+  description: string | null
+  images: string[]
+}
+
+/** Width requested via the ?w= param (larger = higher resolution). */
+function imgWidth(url: string): number {
+  return Number(/[?&]w=(\d+)/.exec(url)?.[1] ?? 0)
+}
+
+/**
+ * Scrape one public /mod/{id} page: description text + gallery images.
+ * Deliberately does NOT touch the site's JS-gated /dl/ download endpoint —
+ * JamFinds links to the original mod page instead of mirroring files.
+ */
+export async function fetchBeamfreeDetail(id: string | number): Promise<BeamfreeDetail> {
+  const numId = String(id).replace(/\D/g, "")
+  if (!numId) throw new Error(`invalid BeamFree mod id: ${id}`)
+  const html = await fetchBeamfreePage(`https://beamfree.pro/mod/${numId}`)
+  const descHtml = html.match(/<div class="desc">([\s\S]*?)<\/div>/)?.[1] ?? ""
+  const description = descToText(descHtml) || null
+  // Gallery: dedupe by path (same image is served at several ?w= sizes),
+  // keeping the highest-resolution variant of each.
+  const byBase = new Map<string, string>()
+  for (const m of html.matchAll(/src="(\/i\/[^"]+)"/g)) {
+    const abs = decodeEntities(`https://beamfree.pro${m[1]}`)
+    const base = abs.split("?")[0]
+    const prev = byBase.get(base)
+    if (!prev || imgWidth(abs) > imgWidth(prev)) byBase.set(base, abs)
+  }
+  return { description, images: [...byBase.values()].slice(0, 12) }
 }
 
 /** Category inference re-exported for the sync engine. */

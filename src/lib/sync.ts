@@ -19,7 +19,9 @@ import {
   fetchBeamfinds,
   fetchBeamfindsFull,
   fetchBeamfindsTotal,
-  fetchBeamfree,
+  fetchBeamfreeFull,
+  fetchBeamfreeNew,
+  fetchBeamfreeTotal,
   type NormalizedEntry,
 } from "@/lib/scrapers"
 import { cleanTitle, extractLinks, hasDownloadLink, inferCategory } from "@/lib/links"
@@ -137,6 +139,19 @@ function normalize(entry: NormalizedEntry): NormalizedRow {
   }
 }
 
+function pickRicherText(a: string, b: string): string {
+  return (b?.length ?? 0) >= (a?.length ?? 0) ? b : a
+}
+
+function jsonArrLen(s: string): number {
+  try {
+    const v = JSON.parse(s)
+    return Array.isArray(v) ? v.length : 0
+  } catch {
+    return 0
+  }
+}
+
 async function upsertEntry(entry: NormalizedEntry): Promise<"insert" | "update"> {
   const n = normalize(entry)
   if (isNaN(n.publishedAt.getTime())) n.publishedAt = new Date()
@@ -156,18 +171,51 @@ async function upsertEntry(entry: NormalizedEntry): Promise<"insert" | "update">
 
   const existing = await db.mod.findUnique({
     where: { id: entry.id },
-    select: { id: true, publishedAt: true },
+    select: { id: true, publishedAt: true, text: true, thumbnail: true, images: true },
   })
   if (existing) {
     // Keep the oldest publishedAt — scraped listings have no timestamps and
     // would otherwise drift forward on every sync.
     const publishedAt =
       existing.publishedAt.getTime() <= n.publishedAt.getTime() ? existing.publishedAt : n.publishedAt
-    await db.mod.update({ where: { id: entry.id }, data: { ...data, publishedAt } })
+    // Web-source rows re-scrape the same listing cards forever. A thinner
+    // scrape (stats-line preview) must never erase richer data already
+    // stored by detail-page enrichment (descriptions, gallery images) or by
+    // a previous manual correction — merge, keep the richer side. Reddit
+    // rows keep the plain overwrite: posts get edited, newest body wins.
+    const merged =
+      entry.id.startsWith("t3_")
+        ? data
+        : {
+            ...data,
+            text: pickRicherText(existing.text, data.text),
+            thumbnail: data.thumbnail ?? existing.thumbnail,
+            images:
+              jsonArrLen(data.images) >= jsonArrLen(existing.images) ? data.images : existing.images,
+          }
+    await db.mod.update({ where: { id: entry.id }, data: { ...merged, publishedAt } })
     return "update"
   }
   await db.mod.create({ data: { id: n.id, ...data, publishedAt: n.publishedAt } })
   return "insert"
+}
+
+/**
+ * Upsert entries through the exact same normalize/upsert path the sync
+ * engine uses — exposed for backfill scripts so imported rows are
+ * categorized, gated and merged identically to live-synced ones.
+ */
+export async function upsertEntries(
+  entries: NormalizedEntry[],
+): Promise<{ inserted: number; updated: number }> {
+  let inserted = 0
+  let updated = 0
+  for (const e of entries) {
+    const kind = await upsertEntry(e)
+    if (kind === "insert") inserted++
+    else updated++
+  }
+  return { inserted, updated }
 }
 
 /** Collect fresh entries from every source, with per-source error capture. */
@@ -222,7 +270,16 @@ async function fetchAllSources(): Promise<{ fetched: number; lastError?: string 
             ? await fetchBeamfindsFull()
             : await fetchBeamfinds(2)
       } else if (def.key === "BeamFree") {
-        entries = await fetchBeamfree()
+        // Same strategy as BeamFinds: cheap catalog-size probe via the /mods
+        // pager; full sweep when the DB is meaningfully behind (first run /
+        // long downtime), newest-first top-up otherwise. Polite by design —
+        // BeamFree's terms forbid scraping that harms the service.
+        const total = await fetchBeamfreeTotal()
+        const have = await db.mod.count({ where: { source: "BeamFree" } })
+        entries =
+          total != null && have < total - 10
+            ? await fetchBeamfreeFull()
+            : await fetchBeamfreeNew()
       }
       fetched += entries.length
       if (def.kind === "web") {
