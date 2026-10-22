@@ -24,9 +24,11 @@ export async function GET(req: NextRequest) {
     where.OR = [{ title: { contains: q } }, { text: { contains: q } }, { author: { contains: q } }]
   }
   // Main feed (cat=all) shows downloadable mods only — request posts live
-  // exclusively in the Requests section so they never mix with real mods.
+  // exclusively in the Requests section (Task 4), and linkless/junk-link
+  // posts live in their own "No download" bucket (Task 8) so Vehicles,
+  // Maps etc. only ever contain working mods.
   if (cat && cat !== "all") where.category = cat
-  else where.category = { not: "request" }
+  else where.category = { notIn: ["request", "no-link"] }
   if (source && source !== "all") where.source = source
   if (withLinks) where.hasLinks = true
 

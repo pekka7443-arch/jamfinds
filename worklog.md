@@ -144,3 +144,20 @@ Work Log:
 
 Stage Summary:
 - Deliverable: JamFinds now mirrors the complete BeamFinds catalog — all 478 mods across every category they have (incl. legacy "vehicles"), each with real thumbnail, full description, file size/game version/downloads/rating stats, and the source's own category mapped into our chips (IRL+Fictional+legacy vehicles -> Vehicles; Map -> Maps; Parts+Config -> Parts & Tuning; UI+Sound Mod+Other -> Other). Sync engine self-maintains: cheap newest-first top-up each cycle, automatic full re-sweep whenever we fall >11 mods behind. Requests isolation, BeamFinds /mod/{id} permalinks, and on-site download behavior unchanged.
+
+---
+Task ID: 8
+Agent: main (Z.ai)
+Task: "If the mod doesn't have any link for download, put it to Requests or something else — NOT the cars, only working mods." User's screenshot showed three linkless crossposts (RoyalRender's/Royalcrap's/Royalshit's Porsche 911) cluttering Vehicles with no way to download.
+
+Work Log:
+- Diagnosis: the Porsche trio (and 115 more rows) had ZERO links — showcase/rant posts whose vehicle/map-sounding titles sailed past inferCategory into the download categories. Also found hasLinks rows whose ONLY links are non-download pages (ko-fi, patreon, boosty, youtube, base64decode.org, beamng.com) — "not working" by the same standard.
+- New rule (download cats = working mods only): links.ts gained hasDownloadLink()/isDownloadLink() — FILE_HOSTS allowlist (modsfire, mediafire, gdrive, pixeldrain, dropbox, onedrive, workupload, sharemods, mega, beamfinds, beamfree) + URL patterns for real hosts classifyUrl reports as "other" (discordapp.com/attachments, modland.net, gofile, fileditch, temp.sh, catbox). Discord INVITES deliberately NOT download links. Logic lives in types.ts (client-safe — links.ts uses Buffer) with links.ts re-exporting for server consumers.
+- sync.ts normalize(): after hint/inference, any row landing in vehicle/map/skin/parts/other without a real download link is re-bucketed to new category "no-link". Requests (Task 4) and Info untouched.
+- UI: new "No download" chip (key no-link, dim-slate cat-nolink badge hue, Unlink icon in CATEGORY_META/BIG_ICONS) at the end of the chip rail — the user's "or something else", kept separate from Requests so ask-posts stay pure. API cat=all now excludes both request and no-link. Card Get pill now renders ONLY when hasDownloadLink(links) (no more Get button bouncing to patreon/ko-fi), and it targets the first isDownloadLink link.
+- Backfill (scripts/nolink-recategorize.ts, bun): 138 rows moved to no-link (vehicle:68, other:54, map:10, parts:6). Distribution before: vehicle 522/map 41/parts 46/other 44 -> after: vehicle 454 / map 31 / parts 40 / other 44 / no-link 138 / request 109 / skin 1 (total 817 unchanged). Porsche trio + "royal" spam all verified no-link; legit linked mods (e.g. BROYALE (UPLOAD) with modsfire) stayed vehicle.
+- Stability: live sync cycle after backfill re-normalized 200 rows -> identical distribution, 0 bounced back. Typecheck clean (pre-existing rawTitle quirks only).
+- Verified in browser (desktop 1440 + mobile 390, no overflow): All mods 570 (817 - 109 requests - 138 no-link), Vehicles 454 "VEHICLES-CLEAN" (junk titles gone; remaining "RoyalRenderings" strings are a different legit author's name), No download chip = 138 results with unlink badges and ZERO Get pills, zero console errors. Screenshots download/t8-*.png.
+
+Stage Summary:
+- Deliverable: every download category (All mods, Vehicles, Maps, Skins, Parts & Tuning, Other) now contains ONLY posts with a real download link; the 138 linkless/junk-link posts (incl. the Porsche 911 crosspost spam from the user's screenshot) live in the new "No download" section; Requests untouched (109). Rule is enforced at sync time for all future posts and survives re-normalization.

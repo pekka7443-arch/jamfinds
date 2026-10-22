@@ -109,6 +109,14 @@ export function cleanTitle(title: string): string {
 }
 
 /* ------------------------------------------------------------------ */
+/* Download-link detection                                             */
+/* ------------------------------------------------------------------ */
+
+// The actual logic lives in types.ts (client-safe — mod-card uses it for the
+// Get pill); links.ts re-exports it for server-side consumers.
+export { isDownloadLink, hasDownloadLink } from "@/lib/types"
+
+/* ------------------------------------------------------------------ */
 /* Category inference                                                  */
 /* ------------------------------------------------------------------ */
 

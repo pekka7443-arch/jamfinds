@@ -96,6 +96,49 @@ export function hostStyle(host: string): HostStyle {
   return HOST_STYLES[host] ?? HOST_STYLES.other;
 }
 
+/* ------------------------------------------------------------------ */
+/* Download-link detection (client-safe — no Node deps)                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Hosts that actually serve mod files (directly, or behind one click on the
+ * host's own page). Posts whose ONLY links point somewhere else — Patreon,
+ * Ko-fi, Boosty, YouTube, Discord invites, official sites, link collections —
+ * have no real download and must never sit in the download categories
+ * (Vehicles/Maps/etc. are "working mods only").
+ */
+const FILE_HOSTS = new Set([
+  "modsfire",
+  "mediafire",
+  "gdrive",
+  "pixeldrain",
+  "dropbox",
+  "onedrive",
+  "workupload",
+  "sharemods",
+  "mega",
+  "beamfinds",
+  "beamfree",
+]);
+
+/**
+ * Real file hosts that classifyUrl reports as "other": Discord CDN
+ * attachments (cdn.discordapp.com is not discord.com), Modland and a few
+ * common free hosts seen in BeamNG circles. Discord INVITES (discord.gg /
+ * discord.com) are deliberately NOT download links — gated content.
+ */
+const FILE_HOST_URL_RE =
+  /https?:\/\/(?:[\w-]+\.)*(?:discordapp\.com\/attachments|modland\.net|gofile\.io|fileditch|ditch\.moe|temp\.sh|catbox\.moe)/i;
+
+export function isDownloadLink(link: { host: string; url: string }): boolean {
+  if (FILE_HOSTS.has(link.host)) return true;
+  return FILE_HOST_URL_RE.test(link.url);
+}
+
+export function hasDownloadLink(links: { host: string; url: string }[]): boolean {
+  return links.some(isDownloadLink);
+}
+
 export const CATEGORIES: { key: string; label: string }[] = [
   { key: "all", label: "All mods" },
   { key: "vehicle", label: "Vehicles" },
@@ -105,6 +148,7 @@ export const CATEGORIES: { key: string; label: string }[] = [
   { key: "request", label: "Requests" },
   { key: "info", label: "Info" },
   { key: "other", label: "Other" },
+  { key: "no-link", label: "No download" },
 ];
 
 /**
@@ -122,4 +166,5 @@ export const CATEGORY_STYLES: Record<string, string> = {
   request: "badge-tint cat-request",
   info: "badge-tint cat-info",
   other: "badge-tint cat-other",
+  "no-link": "badge-tint cat-nolink",
 };

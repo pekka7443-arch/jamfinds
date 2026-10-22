@@ -2,8 +2,28 @@
 
 import { useMemo, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { KeyRound, User2, Car, Map as MapIcon, Wrench, HelpCircle, Info, Package, Megaphone, Download } from "lucide-react";
-import { hostStyle, parseLinks, parseImages, CATEGORY_STYLES, type ModItem } from "@/lib/types";
+import {
+  KeyRound,
+  User2,
+  Car,
+  Map as MapIcon,
+  Wrench,
+  HelpCircle,
+  Info,
+  Package,
+  Megaphone,
+  Download,
+  Unlink,
+} from "lucide-react";
+import {
+  hostStyle,
+  parseLinks,
+  parseImages,
+  CATEGORY_STYLES,
+  hasDownloadLink,
+  isDownloadLink,
+  type ModItem,
+} from "@/lib/types";
 import { sourceDef } from "@/lib/sources";
 import { RelativeTime } from "./relative-time";
 
@@ -15,6 +35,7 @@ const CATEGORY_META: Record<string, { label: string; icon: React.ReactNode }> = 
   request: { label: "Request", icon: <HelpCircle className="h-3 w-3" /> },
   info: { label: "Info", icon: <Megaphone className="h-3 w-3" /> },
   other: { label: "Other", icon: <Info className="h-3 w-3" /> },
+  "no-link": { label: "No download", icon: <Unlink className="h-3 w-3" /> },
 };
 
 export function categoryMeta(cat: string) {
@@ -30,6 +51,7 @@ const BIG_ICONS: Record<string, typeof Car> = {
   request: HelpCircle,
   info: Megaphone,
   other: Info,
+  "no-link": Unlink,
 };
 
 export function ModCard({
@@ -118,7 +140,7 @@ export function ModCard({
           )}
         </div>
 
-        {/* host badges strip + quick download */}
+        {/* host badges strip + quick download (real download links only) */}
         {links.length > 0 && (
           <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-center gap-1 bg-gradient-to-t from-black/85 via-black/45 to-transparent px-2 pb-1.5 pt-5">
             {links.slice(0, 3).map((l) => {
@@ -136,20 +158,22 @@ export function ModCard({
             {links.length > 3 && (
               <span className="text-[10px] font-medium text-zinc-200">+{links.length - 3}</span>
             )}
-            <a
-              href={`/api/download?url=${encodeURIComponent((links.find((l) => l.host !== "other") ?? links[0]).url)}&name=${encodeURIComponent(
-                mod.title.replace(/[/\\?%*:|<>"\r\n]/g, " ").replace(/\s+/g, " ").trim().slice(0, 80),
-              )}`}
-              download
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-              className="ml-auto inline-flex h-6 shrink-0 items-center gap-1 rounded-md border border-primary/40 bg-primary/20 px-1.5 text-[10px] font-semibold text-zinc-50 backdrop-blur-sm transition-colors duration-150 hover:bg-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label={`Download ${mod.title}`}
-              title="Download via JamFinds"
-            >
-              <Download className="h-3 w-3" aria-hidden="true" />
-              Get
-            </a>
+            {hasDownloadLink(links) && (
+              <a
+                href={`/api/download?url=${encodeURIComponent((links.find((l) => isDownloadLink(l)) ?? links[0]).url)}&name=${encodeURIComponent(
+                  mod.title.replace(/[/\\?%*:|<>"\r\n]/g, " ").replace(/\s+/g, " ").trim().slice(0, 80),
+                )}`}
+                download
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+                className="ml-auto inline-flex h-6 shrink-0 items-center gap-1 rounded-md border border-primary/40 bg-primary/20 px-1.5 text-[10px] font-semibold text-zinc-50 backdrop-blur-sm transition-colors duration-150 hover:bg-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label={`Download ${mod.title}`}
+                title="Download via JamFinds"
+              >
+                <Download className="h-3 w-3" aria-hidden="true" />
+                Get
+              </a>
+            )}
           </div>
         )}
       </div>

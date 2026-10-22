@@ -22,7 +22,7 @@ import {
   fetchBeamfree,
   type NormalizedEntry,
 } from "@/lib/scrapers"
-import { cleanTitle, extractLinks, inferCategory } from "@/lib/links"
+import { cleanTitle, extractLinks, hasDownloadLink, inferCategory } from "@/lib/links"
 import { SOURCE_DEFS, SOURCES } from "@/lib/sources"
 
 export { SOURCES }
@@ -102,7 +102,21 @@ function normalize(entry: NormalizedEntry): NormalizedEntry & { category: string
   // BeamFree chips) and beat inference — title/body heuristics only apply
   // when the source doesn't categorize. Web-source catalogs contain real
   // downloadable mods, never request posts, so hints cannot misfile rows.
-  const category = hintToCategory(entry.catHint) ?? inferred
+  const hinted = hintToCategory(entry.catHint)
+  let category = hinted ?? inferred
+  // Task 8: the download categories promise WORKING mods. A post with no
+  // real download link (showcase-only, Patreon/Ko-fi/YouTube/Discord-invite
+  // pages) gets its own bucket instead of sitting among Vehicles/Maps/etc.
+  // Requests and Info are unaffected — they never promised a download.
+  if (
+    category === "vehicle" ||
+    category === "map" ||
+    category === "skin" ||
+    category === "parts" ||
+    category === "other"
+  ) {
+    if (!hasDownloadLink(links)) category = "no-link"
+  }
   const thumbnail =
     entry.thumbnail ?? (entry.images.length === 0 ? gdriveThumbFromLinks(links) : null)
   return {

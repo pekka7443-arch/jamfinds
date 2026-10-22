@@ -280,6 +280,7 @@ body::after {
 .cat-request { --bh: 22; }
 .cat-info { --bh: 245; }
 .cat-other { --bh: 270; --bc: 0.028; }
+.cat-nolink { --bh: 256; --bc: 0.035; }
 
 /* file hosts */
 .host-modsfire { --bh: 75; }
