@@ -134,10 +134,10 @@ export default function Home() {
         });
       } else if ((res.result?.inserted ?? 0) > 0) {
         toast({
-          title: `✅ Synced — ${res.result!.inserted} new mod${res.result!.inserted === 1 ? "" : "s"} found`,
+          title: `Synced — ${res.result!.inserted} new mod${res.result!.inserted === 1 ? "" : "s"} found`,
         });
       } else {
-        toast({ title: "✅ Already up to date", description: "No new posts on any source since last sync." });
+        toast({ title: "Already up to date", description: "No new posts on any source since last sync." });
       }
     },
     onError: () => {
@@ -262,8 +262,8 @@ export default function Home() {
           ) : shownMods.length === 0 ? (
             /* Saved view with nothing starred (or nothing loaded yet) */
             <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-card/50 p-10 text-center sm:p-12">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gold/15">
-                <Star className="h-6 w-6 text-gold" aria-hidden="true" />
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15">
+                <Star className="h-6 w-6 text-primary" aria-hidden="true" />
               </span>
               <div>
                 <p className="tt-h2 text-foreground">Nothing saved yet</p>

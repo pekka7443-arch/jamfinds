@@ -186,3 +186,21 @@ Work Log:
 
 Stage Summary:
 - JamFinds is production-hardened: SSRF-guarded, rate-limited, redirect-safe download proxy with honest capability reporting; 46-test suite; zero type/lint errors; brand + motion system in place; Saved feature shipped. Known upstream limitation: modsfire's file CDN currently 403s this sandbox IP (Cloudflare) — proxy path proven via Google Drive instead; code self-heals when the block lifts.
+
+---
+Task ID: 10
+Agent: main (Z.ai)
+Task: Premium dark-purple redesign — "Violet Ink" identity, near-flat background, zero green, full interface polish, preserve all functionality/security.
+
+Work Log:
+- Baseline: tsc 0 errors, eslint 0 problems, 46/46 bun tests pass (recorded BEFORE any change).
+- Green map: globals.css theme vars (--primary/--ring/--jam-green hue 150-152), jamaica-strip + text-gradient-jam, hero-bg + body::before green glows + 48s ambient-drift, film-grain body::after, pointer-glow (ambient-glow.tsx), live-pulse rgba(85,209,128), fresh-gold glow, gold tokens (NEW badge, stars, decoded, stat accents), badge hues 90/130/152, sources.ts bg-emerald-400, header/footer monogram #2ee06f/#fed100, hero 🇯🇲 emoji, page.tsx ✅ emoji (renders green).
+- globals.css rewritten: Violet Ink palette on hue 293 — background oklch(0.148 0.011 293)≈#0B0B10, secondary≈#111118, card≈#16151F, popover higher, border white/8% (reads #292535-family over cards), primary #A78BFA (oklch 0.702 0.183 293.5) with ink primary-foreground (6.7:1), destructive red kept. Removed --gold/--jam-green entirely; :root and .dark now mirror (dark-only site).
+- Background: body::before is now ONE static 5%-alpha violet top tint; REMOVED ambient-drift animation, film grain, pointer-glow layer + component, oversized blobs. Hero-bg reduced to 9% whisper tint (also used by generated card covers).
+- Badges: one tint recipe, hues re-mapped avoiding oklch 100-170 green band; all/saved → cat-brand 293, vehicle 258, map 222, skin 330, parts 70, request 25, info 200, hosts re-mapped (gdrive 218, sharemods 345, etc.).
+- Components: header (strip removed, violet monogram mirrors new icon.svg/logo.svg, text-gradient-brand), hero (Radio icon pill, violet stat accents), mod-card (bg-card solid, violet NEW badge + stars), mod-dialog (solid bg-popover, no backdrop blur, violet decoded/star), page (green ✅ emoji removed from toasts, violet saved empty state), footer (gradient class), types.ts CATEGORY_STYLES, sources.ts dots (violet-300/indigo-400), brand.ts comment -> Violet Ink.
+- DELETED src/components/site/ambient-glow.tsx; layout.tsx no longer renders it; themeColor #0B0B10.
+
+Stage Summary:
+- Verified: tsc clean, eslint clean, 46/46 tests, live SSRF guards still 400 (localhost + 169.254.169.254), resolve flow honest (external BeamFree), zero browser console/page errors on desktop 1440x900 + mobile 390x844, no horizontal overflow, search+chips+saved+unsave+empty-state+dialog+focus-ring all exercised, keyboard focus visible (violet ring), reduced-motion block present in served CSS (pointer-glow gone), served CSS contains zero applied green (only inert Tailwind default-theme variables, 0 DOM elements use emerald classes), WCAG contrast: body 17.8:1, muted 7.9:1, violet accent 6.9:1, ink-on-violet 6.7:1, badge 8.5:1 — all AA PASS. Diff +190/-333, 0 secrets/debug lines. Screenshots download/t10-*.png.
+- Not verified: production build (sandbox runs dev server only; bun run build is forbidden here), prefers-reduced-motion emulation (verified at CSS level only), download proxy streaming (code untouched this task; guard regression-tested live).

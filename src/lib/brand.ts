@@ -1,11 +1,11 @@
 /**
  * Brand configuration — the single place to rename or retune the product.
  *
- * Naming evaluation (Task 9): kept "JamFinds" — short, memorable, unique in
+ * Naming evaluation: kept "JamFinds" — short, memorable, unique in
  * the BeamNG scene, and "finds" describes exactly what the site does. The
- * Jamaica-inspired green/gold palette stays as the founding story of the
- * site (r/Beamng_Jamaica was the first source). Changing BRAND here updates
- * metadata, header, hero and footer together.
+ * visual identity is "Violet Ink": near-black charcoal surfaces with a
+ * single refined violet accent (see globals.css). Changing BRAND here
+ * updates metadata, header, hero and footer together.
  */
 
 export const BRAND = {

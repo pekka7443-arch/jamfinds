@@ -68,7 +68,7 @@ export function ModDialog({ mod, open, onOpenChange }: { mod: ModItem | null; op
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="nice-scroll max-h-[85vh] max-w-2xl overflow-y-auto rounded-xl! border-border bg-popover/90 backdrop-blur-xl">
+      <DialogContent className="nice-scroll max-h-[85vh] max-w-2xl overflow-y-auto rounded-xl! border-border bg-popover shadow-2xl">
         <DialogHeader>
           <div className="flex flex-wrap items-center gap-2 pr-6">
             {cat && (
@@ -82,7 +82,7 @@ export function ModDialog({ mod, open, onOpenChange }: { mod: ModItem | null; op
               {src?.label ?? mod.source}
             </span>
             {decodedCount > 0 && (
-              <Badge className="border-0 bg-gold/90 text-[11px] font-bold text-black">
+              <Badge className="border border-primary/30 bg-primary/15 text-[11px] font-bold text-primary">
                 <KeyRound className="mr-1 h-3 w-3" aria-hidden="true" /> {decodedCount} decoded
               </Badge>
             )}
@@ -92,9 +92,9 @@ export function ModDialog({ mod, open, onOpenChange }: { mod: ModItem | null; op
               aria-pressed={isSaved(mod.id)}
               aria-label={isSaved(mod.id) ? "Remove from saved" : "Save this mod"}
               title={isSaved(mod.id) ? "Saved — tap to remove" : "Save this mod"}
-              className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-secondary/60 text-muted-foreground transition-colors duration-150 hover:border-gold/50 hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-secondary/60 text-muted-foreground transition-colors duration-150 hover:border-primary/50 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <Star className={`h-4 w-4 ${isSaved(mod.id) ? "fill-gold text-gold" : ""}`} aria-hidden="true" />
+              <Star className={`h-4 w-4 ${isSaved(mod.id) ? "fill-primary text-primary" : ""}`} aria-hidden="true" />
             </button>
           </div>
           <DialogTitle className="pr-6 text-left text-lg leading-snug">{mod.title}</DialogTitle>
@@ -173,7 +173,7 @@ export function ModDialog({ mod, open, onOpenChange }: { mod: ModItem | null; op
                           {l.decoded && <KeyRound className="h-3 w-3" aria-hidden="true" />}
                           {l.label}
                         </span>
-                        {l.decoded && <span className="text-[10px] font-medium text-gold">base64 decoded</span>}
+                        {l.decoded && <span className="text-[10px] font-medium text-primary">base64 decoded</span>}
                       </div>
                       <p className="mt-1 truncate font-mono text-xs text-muted-foreground" title={l.url}>
                         {l.url}

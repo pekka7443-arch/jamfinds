@@ -3,7 +3,6 @@ import { Geist, Geist_Mono, Archivo_Black } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Providers } from "@/components/providers";
-import { AmbientGlow } from "@/components/site/ambient-glow";
 import { BRAND } from "@/lib/brand";
 
 const geistSans = Geist({
@@ -47,7 +46,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#070d0a",
+  themeColor: "#0B0B10",
 };
 
 export default function RootLayout({
@@ -63,7 +62,6 @@ export default function RootLayout({
         <a href="#main" className="skip-link">
           Skip to content
         </a>
-        <AmbientGlow />
         <Providers>{children}</Providers>
         <Toaster />
       </body>

@@ -29,7 +29,7 @@ export const SOURCE_DEFS: SourceDef[] = [
     kind: "reddit",
     label: "r/Beamng_Jamaica",
     url: "https://www.reddit.com/r/Beamng_Jamaica/",
-    dot: "bg-emerald-400",
+    dot: "bg-violet-300",
     chip: "badge-tint cat-vehicle",
   },
   {
@@ -69,7 +69,7 @@ export const SOURCE_DEFS: SourceDef[] = [
     kind: "web",
     label: "BeamFree",
     url: "https://beamfree.pro/",
-    dot: "bg-violet-400",
+    dot: "bg-indigo-400",
     chip: "badge-tint host-beamfree",
   },
 ];

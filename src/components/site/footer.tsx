@@ -10,7 +10,7 @@ export function Footer() {
         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
           <div className="max-w-2xl text-xs leading-relaxed text-muted-foreground">
             <p className="font-semibold text-foreground/80">
-              Jam<span className="text-gradient-jam">Finds</span> — unofficial live index of BeamNG.drive mods
+              Jam<span className="text-gradient-brand">Finds</span> — unofficial live index of BeamNG.drive mods
             </p>
             <p className="mt-1.5">
               Not affiliated with Reddit, BeamNG GmbH, BeamFinds, BeamFree, or any subreddit staff. All mods are

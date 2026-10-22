@@ -17,9 +17,7 @@ export function Header({ sync, refreshing, onRefresh }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-40 w-full">
-      {/* Jamaican flag strip */}
-      <div className="jamaica-strip h-1 w-full" aria-hidden="true" />
-      <div className="border-b border-border bg-background/80 backdrop-blur-lg backdrop-saturate-150 supports-[backdrop-filter]:bg-background/55">
+      <div className="border-b border-border bg-background/85 backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
         <div className="mx-auto flex h-14 max-w-7xl items-center gap-2.5 px-4 sm:px-6">
           {/* Logo */}
           <a
@@ -29,14 +27,14 @@ export function Header({ sync, refreshing, onRefresh }: HeaderProps) {
           >
             {/* Brand monogram — live "found it" pulse mark (mirrors app/icon.svg) */}
             <svg width="22" height="22" viewBox="0 0 64 64" aria-hidden="true" className="shrink-0">
-              <rect width="64" height="64" rx="14" fill="#0b1410" />
-              <path d="M17 41a19 19 0 0 1 30-15" stroke="#2ee06f" strokeWidth="4.5" fill="none" strokeLinecap="round" opacity="0.42" />
-              <path d="M23 42a12.5 12.5 0 0 1 20-9.5" stroke="#2ee06f" strokeWidth="4.5" fill="none" strokeLinecap="round" opacity="0.85" />
-              <circle cx="43.5" cy="22" r="5.5" fill="#fed100" />
+              <rect width="64" height="64" rx="14" fill="#141220" />
+              <path d="M17 41a19 19 0 0 1 30-15" stroke="#8B5CF6" strokeWidth="4.5" fill="none" strokeLinecap="round" opacity="0.45" />
+              <path d="M23 42a12.5 12.5 0 0 1 20-9.5" stroke="#A78BFA" strokeWidth="4.5" fill="none" strokeLinecap="round" opacity="0.9" />
+              <circle cx="43.5" cy="22" r="5.5" fill="#C4B5FD" />
             </svg>
             <span className="font-[family-name:var(--font-display)] text-lg tracking-tight">
               <span className="text-foreground">Jam</span>
-              <span className="text-gradient-jam">Finds</span>
+              <span className="text-gradient-brand">Finds</span>
             </span>
           </a>
 

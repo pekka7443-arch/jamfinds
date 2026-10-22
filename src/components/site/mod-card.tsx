@@ -87,7 +87,7 @@ export function ModCard({
   return (
     <article
       style={style}
-      className={`card-in surface-card surface-card-hover group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-xl bg-card/80 outline-none transition-all duration-200 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring active:translate-y-0 active:scale-[0.995] ${
+      className={`card-in surface-card surface-card-hover group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-xl bg-card outline-none transition-all duration-200 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring active:translate-y-0 active:scale-[0.995] ${
         fresh ? "fresh-card" : ""
       }`}
       onClick={() => onOpen(mod)}
@@ -142,7 +142,7 @@ export function ModCard({
           </span>
           <span className="flex shrink-0 items-center gap-1">
             {isNew && (
-              <span className="rounded-full bg-gold px-1.5 py-0.5 text-[10px] font-bold leading-[1.6] text-black shadow-sm">
+              <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-[1.6] text-primary-foreground shadow-sm">
                 NEW
               </span>
             )}
@@ -156,9 +156,9 @@ export function ModCard({
               aria-pressed={saved}
               aria-label={saved ? `Remove ${mod.title} from saved` : `Save ${mod.title}`}
               title={saved ? "Saved — tap to remove" : "Save this mod"}
-              className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-black/45 text-zinc-300 backdrop-blur-sm transition-colors duration-150 hover:bg-black/65 hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-black/45 text-zinc-300 backdrop-blur-sm transition-colors duration-150 hover:bg-black/65 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <Star className={`h-3.5 w-3.5 ${saved ? "fill-gold text-gold" : ""}`} aria-hidden="true" />
+              <Star className={`h-3.5 w-3.5 ${saved ? "fill-primary text-primary" : ""}`} aria-hidden="true" />
             </button>
           </span>
         </div>

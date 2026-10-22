@@ -1,6 +1,6 @@
 "use client";
 
-import { Car, Unlock, Clock3, Database } from "lucide-react";
+import { Car, Unlock, Clock3, Database, Radio } from "lucide-react";
 import type { ModsResponse } from "@/lib/types";
 import { SOURCE_DEFS } from "@/lib/sources";
 import { RelativeTime } from "./relative-time";
@@ -44,12 +44,13 @@ export function Hero({ data, isLoading }: HeroProps) {
     <section className="hero-bg border-b border-border">
       <div className="mx-auto max-w-7xl px-4 pb-8 pt-10 sm:px-6">
         <div className="flex flex-col items-start gap-3">
-          <span className="rise-in inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-semibold text-gold">
-            🇯🇲 BeamNG.drive · live multi-source hub
+          <span className="rise-in inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+            <Radio className="h-3 w-3" aria-hidden="true" />
+            BeamNG.drive · live multi-source hub
           </span>
           <h1 className="tt-display rise-in rise-in-1 max-w-3xl">
             Every BeamNG mod drop,
-            <br className="hidden sm:block" /> <span className="text-gradient-jam">the second it lands.</span>
+            <br className="hidden sm:block" /> <span className="text-gradient-brand">the second it lands.</span>
           </h1>
           <p className="tt-body rise-in rise-in-2 max-w-2xl text-muted-foreground">
             JamFinds watches four subreddits and two mod sites around the clock — r/Beamng_Jamaica,
@@ -68,11 +69,11 @@ export function Hero({ data, isLoading }: HeroProps) {
             accent="bg-primary/15"
           />
           <StatCard
-            icon={<Clock3 className="h-3.5 w-3.5 text-gold" />}
+            icon={<Clock3 className="h-3.5 w-3.5 text-primary" />}
             label="New in 24h"
             value={isLoading ? "…" : data?.stats.fresh24h ?? 0}
             hint="published in the last day"
-            accent="bg-gold/15"
+            accent="bg-primary/15"
           />
           <StatCard
             icon={<Unlock className="h-3.5 w-3.5 text-primary" />}
@@ -82,11 +83,11 @@ export function Hero({ data, isLoading }: HeroProps) {
             accent="bg-primary/15"
           />
           <StatCard
-            icon={<Car className="h-3.5 w-3.5 text-gold" />}
+            icon={<Car className="h-3.5 w-3.5 text-primary" />}
             label="Last sync"
             value={data?.sync.lastSyncAt ? <RelativeTime iso={data.sync.lastSyncAt} /> : isLoading ? "…" : "—"}
             hint={`across ${SOURCE_DEFS.length} sources, every minute`}
-            accent="bg-gold/15"
+            accent="bg-primary/15"
           />
         </div>
       </div>

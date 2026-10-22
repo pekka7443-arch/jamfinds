@@ -155,13 +155,13 @@ export const CATEGORIES: { key: string; label: string }[] = [
 ];
 
 /**
- * Category color system — one badge-tint recipe (globals.css) with seven
+ * Category color system — one badge-tint recipe (globals.css) with
  * well-separated hues sharing identical lightness/chroma/border-alpha,
- * so chips stay distinguishable but read as one family.
- * Shared by filter chips and card badges.
+ * so chips stay distinguishable but read as one family. No hue falls in
+ * the green band (oklch 100–170). Shared by filter chips and card badges.
  */
 export const CATEGORY_STYLES: Record<string, string> = {
-  all: "badge-tint cat-vehicle",
+  all: "badge-tint cat-brand",
   vehicle: "badge-tint cat-vehicle",
   map: "badge-tint cat-map",
   skin: "badge-tint cat-skin",
@@ -170,5 +170,5 @@ export const CATEGORY_STYLES: Record<string, string> = {
   info: "badge-tint cat-info",
   other: "badge-tint cat-other",
   "no-link": "badge-tint cat-nolink",
-  saved: "badge-tint cat-saved",
+  saved: "badge-tint cat-brand",
 };

@@ -38,101 +38,95 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --color-gold: var(--gold);
-  --color-jam-green: var(--jam-green);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/*
+ * JamFinds — "Violet Ink" palette (dark-only theme, hardcoded on <html>).
+ *
+ * One neutral family with a cool violet cast (hue ~293) on a 4-layer
+ * surface ladder, each step clearly lighter than the last:
+ *   background #0B0B10-ish  →  secondary  →  card #16151F-ish  →  popover
+ * Borders are low-opacity white that reads as the dark-purple-gray
+ * (#292535-family) over the card surfaces; text tiers: foreground 0.965
+ * (≈16:1), muted 0.72 (≈7:1) — both pass WCAG AA comfortably.
+ *
+ * Accent strategy: ONE brand accent — violet (hue 293.5). Violet drives
+ * actions, links, live state, saved stars and focus rings. Error keeps a
+ * clear red; category/host badges share one oklch recipe (badge-tint)
+ * differing only in hue — no hue in the 100–170 (green) range anywhere.
+ */
 :root {
   --radius: 0.625rem;
-  --background: oklch(0.985 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.62 0.19 150);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.446 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.62 0.19 150);
-  --gold: oklch(0.75 0.15 95);
-  --jam-green: oklch(0.62 0.19 150);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.62 0.19 150);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --background: oklch(0.148 0.011 293);
+  --foreground: oklch(0.965 0.008 293);
+  --card: oklch(0.212 0.016 293);
+  --card-foreground: oklch(0.965 0.008 293);
+  --popover: oklch(0.235 0.018 293);
+  --popover-foreground: oklch(0.965 0.008 293);
+  --primary: oklch(0.702 0.183 293.5);
+  --primary-foreground: oklch(0.175 0.045 293);
+  --secondary: oklch(0.185 0.014 293);
+  --secondary-foreground: oklch(0.965 0.008 293);
+  --muted: oklch(0.2 0.014 293);
+  --muted-foreground: oklch(0.72 0.022 293);
+  --accent: oklch(0.27 0.02 293);
+  --accent-foreground: oklch(0.965 0.008 293);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 10%);
+  --ring: oklch(0.702 0.183 293.5);
+  --chart-1: oklch(0.702 0.183 293.5);
+  --chart-2: oklch(0.68 0.16 230);
+  --chart-3: oklch(0.75 0.12 70);
+  --chart-4: oklch(0.72 0.16 330);
+  --chart-5: oklch(0.68 0.16 25);
+  --sidebar: oklch(0.212 0.016 293);
+  --sidebar-foreground: oklch(0.965 0.008 293);
+  --sidebar-primary: oklch(0.702 0.183 293.5);
+  --sidebar-primary-foreground: oklch(0.175 0.045 293);
+  --sidebar-accent: oklch(0.27 0.02 293);
+  --sidebar-accent-foreground: oklch(0.965 0.008 293);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.702 0.183 293.5);
 }
 
-/*
- * Dark palette — the site's only active theme (hardcoded on <html>).
- *
- * One intentional 4-layer surface ladder on a single neutral hue (165,
- * a deep green-teal cast that stays in the brand family without muddiness):
- *   background 0.15  →  card 0.205  →  popover 0.24  →  secondary/accent 0.275+
- * Each step is clearly lighter than the last, so page / card / elevated
- * read as distinct planes. Borders are low-opacity white (7%) instead of
- * hard gray lines; text tiers: foreground 0.965 (≈15:1), muted 0.735 (≈8:1),
- * both pass WCAG AA comfortably.
- *
- * Accent strategy: exactly two brand accents — green (primary, hue 152)
- * for actions/links/live state, gold (hue 95) for freshness/decoded/NEW.
- * Category & host badges share one oklch recipe (badge-tint) differing
- * only in hue, so every badge sits in the same tonal family.
- */
+/* Dark-only site: .dark mirrors :root (html carries the class hardcoded). */
 .dark {
-  --background: oklch(0.15 0.01 165);
-  --foreground: oklch(0.965 0.005 160);
-  --card: oklch(0.205 0.012 165);
-  --card-foreground: oklch(0.965 0.005 160);
-  --popover: oklch(0.24 0.013 165);
-  --popover-foreground: oklch(0.965 0.005 160);
-  --primary: oklch(0.77 0.16 152);
-  --primary-foreground: oklch(0.16 0.04 152);
-  --secondary: oklch(0.275 0.014 165);
-  --secondary-foreground: oklch(0.965 0.005 160);
-  --muted: oklch(0.245 0.012 165);
-  --muted-foreground: oklch(0.735 0.014 160);
-  --accent: oklch(0.3 0.016 165);
-  --accent-foreground: oklch(0.965 0.005 160);
+  --background: oklch(0.148 0.011 293);
+  --foreground: oklch(0.965 0.008 293);
+  --card: oklch(0.212 0.016 293);
+  --card-foreground: oklch(0.965 0.008 293);
+  --popover: oklch(0.235 0.018 293);
+  --popover-foreground: oklch(0.965 0.008 293);
+  --primary: oklch(0.702 0.183 293.5);
+  --primary-foreground: oklch(0.175 0.045 293);
+  --secondary: oklch(0.185 0.014 293);
+  --secondary-foreground: oklch(0.965 0.008 293);
+  --muted: oklch(0.2 0.014 293);
+  --muted-foreground: oklch(0.72 0.022 293);
+  --accent: oklch(0.27 0.02 293);
+  --accent-foreground: oklch(0.965 0.008 293);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 7%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.77 0.16 152);
-  --gold: oklch(0.865 0.165 95);
-  --jam-green: oklch(0.77 0.16 152);
-  --chart-1: oklch(0.77 0.16 152);
-  --chart-2: oklch(0.865 0.165 95);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0.012 165);
-  --sidebar-foreground: oklch(0.965 0.005 160);
-  --sidebar-primary: oklch(0.77 0.16 152);
-  --sidebar-primary-foreground: oklch(0.16 0.04 152);
-  --sidebar-accent: oklch(0.3 0.016 165);
-  --sidebar-accent-foreground: oklch(0.965 0.005 160);
-  --sidebar-border: oklch(1 0 0 / 7%);
-  --sidebar-ring: oklch(0.77 0.16 152);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 10%);
+  --ring: oklch(0.702 0.183 293.5);
+  --chart-1: oklch(0.702 0.183 293.5);
+  --chart-2: oklch(0.68 0.16 230);
+  --chart-3: oklch(0.75 0.12 70);
+  --chart-4: oklch(0.72 0.16 330);
+  --chart-5: oklch(0.68 0.16 25);
+  --sidebar: oklch(0.212 0.016 293);
+  --sidebar-foreground: oklch(0.965 0.008 293);
+  --sidebar-primary: oklch(0.702 0.183 293.5);
+  --sidebar-primary-foreground: oklch(0.175 0.045 293);
+  --sidebar-accent: oklch(0.27 0.02 293);
+  --sidebar-accent-foreground: oklch(0.965 0.008 293);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.702 0.183 293.5);
 }
 
 @layer base {
@@ -142,12 +136,12 @@
   body {
     @apply bg-background text-foreground;
     overflow-x: hidden;
-    /* promote body to a stacking context so the fixed ambient layers
-       (z-index -1) paint above the body background, below all content */
+    /* promote body to a stacking context so the fixed ambient layer
+       (z-index -1) paints above the body background, below all content */
     isolation: isolate;
   }
   ::selection {
-    background-color: oklch(0.77 0.16 152 / 30%);
+    background-color: oklch(0.702 0.183 293.5 / 32%);
   }
 }
 
@@ -160,31 +154,6 @@
   --motion-base: 220ms;
   --motion-slow: 420ms;
   --ease-soft: cubic-bezier(0.22, 0.9, 0.3, 1);
-}
-
-/* ------------------------------------------------------------------ */
-/* Pointer-reactive ambient glow — one fixed, GPU-translated layer that */
-/* drifts toward the cursor (JS in ambient-glow.tsx). Touch devices and */
-/* reduced-motion users never see it.                                   */
-/* ------------------------------------------------------------------ */
-
-.pointer-glow {
-  position: fixed;
-  top: -26rem;
-  left: -26rem;
-  width: 52rem;
-  height: 52rem;
-  z-index: -1;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 700ms ease;
-  will-change: transform;
-  background: radial-gradient(
-    closest-side,
-    oklch(0.72 0.13 155 / 0.08),
-    oklch(0.72 0.13 155 / 0.028) 46%,
-    transparent 72%
-  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -228,9 +197,10 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* Ambient page background — soft depth, zero components               */
-/* Two fixed pseudo-layers: wide radial glows + a faint film grain.    */
-/* Both sit behind all content (z-index -1) and never intercept input. */
+/* Ambient page background — almost flat, by design.                    */
+/* ONE static, barely-perceptible violet tint anchored to the top of    */
+/* the page (≈4% alpha). No animation, no grain, no glow, no pointer    */
+/* layers — content and mod artwork are the focus.                      */
 /* ------------------------------------------------------------------ */
 
 body::before {
@@ -239,34 +209,11 @@ body::before {
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background:
-    radial-gradient(55rem 34rem at 50% -12rem, oklch(0.62 0.13 158 / 0.11), transparent 62%),
-    radial-gradient(44rem 30rem at 86% -6rem, oklch(0.8 0.14 100 / 0.05), transparent 64%),
-    radial-gradient(46rem 30rem at -8% 26%, oklch(0.6 0.09 210 / 0.045), transparent 60%),
-    radial-gradient(40rem 28rem at 108% 78%, oklch(0.62 0.11 158 / 0.04), transparent 62%);
-  /* barely-there ambient drift — transform-only, 48s cycle */
-  animation: ambient-drift 48s ease-in-out infinite;
-  will-change: transform;
-}
-
-@keyframes ambient-drift {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(0, 10px, 0) scale(1.012);
-  }
-}
-
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  opacity: 0.04;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background: radial-gradient(
+    58rem 30rem at 50% -10rem,
+    oklch(0.62 0.14 293.5 / 0.05),
+    transparent 64%
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -317,16 +264,16 @@ body::after {
 }
 
 /* ------------------------------------------------------------------ */
-/* Surface elevation — one cohesive shadow recipe instead of harsh     */
-/* outlines. Inset top highlight fakes light from above; two soft      */
-/* ambient shadows lift the card off the page. The hover variant adds  */
-/* a gentle brand-green glow + deeper shadow. Pure paint, no layout.   */
+/* Surface elevation — quiet paint instead of glowing outlines.        */
+/* Inset top highlight fakes light from above; two soft ambient        */
+/* shadows lift the card off the page. Hover deepens the shadow and    */
+/* tints the border toward violet — subtle, no halo. Pure paint.       */
 /* ------------------------------------------------------------------ */
 
 .surface-card {
-  border: 1px solid oklch(1 0 0 / 6.5%);
+  border: 1px solid oklch(1 0 0 / 7%);
   box-shadow:
-    inset 0 1px 0 0 oklch(1 0 0 / 4%),
+    inset 0 1px 0 0 oklch(1 0 0 / 3.5%),
     0 1px 2px oklch(0 0 0 / 20%),
     0 12px 32px -16px oklch(0 0 0 / 35%);
 }
@@ -338,120 +285,113 @@ body::after {
 }
 
 .surface-card-hover:hover {
-  border-color: oklch(0.77 0.16 152 / 30%);
+  border-color: oklch(0.702 0.183 293.5 / 26%);
   box-shadow:
-    inset 0 1px 0 0 oklch(1 0 0 / 4.5%),
+    inset 0 1px 0 0 oklch(1 0 0 / 4%),
     0 2px 6px oklch(0 0 0 / 22%),
     0 18px 44px -18px oklch(0 0 0 / 48%),
-    0 0 28px -8px oklch(0.72 0.14 152 / 18%);
+    0 0 22px -10px oklch(0.702 0.183 293.5 / 20%);
 }
 
 /* ------------------------------------------------------------------ */
 /* Badge tint system — categories, hosts and source chips all share    */
 /* ONE recipe: same lightness, same chroma, same border alpha; only    */
-/* the hue (--bh) differs. Result: distinguishable badges that still   */
-/* read as one family instead of random saturated Tailwind hues.       */
+/* the hue (--bh) differs. Hue map deliberately avoids the green band  */
+/* (oklch 100–170): violet/indigo/blue/cyan/pink/rose/orange/amber.    */
 /* ------------------------------------------------------------------ */
 
 .badge-tint {
-  --bh: 165;
+  --bh: 293;
   --bc: 0.11;
   border-color: oklch(0.75 var(--bc) var(--bh) / 26%);
   background-color: oklch(0.7 var(--bc) var(--bh) / 13%);
   color: oklch(0.84 var(--bc) var(--bh));
 }
 
+/* brand + saved (star) share the accent violet */
+.cat-brand { --bh: 293; }
+
 /* categories */
-.cat-vehicle { --bh: 152; }
-.cat-map { --bh: 200; }
+.cat-vehicle { --bh: 258; }
+.cat-map { --bh: 222; }
 .cat-skin { --bh: 330; }
-.cat-parts { --bh: 90; }
-.cat-request { --bh: 22; }
-.cat-info { --bh: 245; }
+.cat-parts { --bh: 70; }
+.cat-request { --bh: 25; }
+.cat-info { --bh: 200; }
 .cat-other { --bh: 270; --bc: 0.028; }
-.cat-nolink { --bh: 256; --bc: 0.035; }
-.cat-saved { --bh: 95; }
+.cat-nolink { --bh: 265; --bc: 0.035; }
+.cat-saved { --bh: 293; }
 
 /* file hosts */
 .host-modsfire { --bh: 75; }
-.host-mediafire { --bh: 245; }
-.host-gdrive { --bh: 152; }
-.host-discord { --bh: 290; }
+.host-mediafire { --bh: 255; }
+.host-gdrive { --bh: 218; }
+.host-discord { --bh: 292; }
 .host-mega { --bh: 15; }
 .host-workupload { --bh: 195; }
-.host-sharemods { --bh: 130; }
-.host-pixeldrain { --bh: 210; }
-.host-onedrive { --bh: 60; }
-.host-dropbox { --bh: 60; }
-.host-beamfinds { --bh: 210; }
-.host-beamfree { --bh: 290; }
+.host-sharemods { --bh: 345; }
+.host-pixeldrain { --bh: 208; }
+.host-onedrive { --bh: 55; }
+.host-dropbox { --bh: 235; }
+.host-beamfinds { --bh: 212; }
+.host-beamfree { --bh: 310; }
 .host-other { --bh: 270; --bc: 0.028; }
 
 /* ------------------------------------------------------------------ */
 /* Theme helpers                                                       */
 /* ------------------------------------------------------------------ */
 
-/* Jamaican flag inspired strip (green / gold / black saltire) */
-.jamaica-strip {
+/* Brand wordmark gradient — quiet violet sweep, no rainbow */
+.text-gradient-brand {
   background: linear-gradient(
-    90deg,
-    #009b3a 0%,
-    #009b3a 22%,
-    #fed100 22%,
-    #fed100 38%,
-    #111111 38%,
-    #111111 62%,
-    #fed100 62%,
-    #fed100 78%,
-    #009b3a 78%,
-    #009b3a 100%
+    95deg,
+    oklch(0.78 0.13 293) 0%,
+    oklch(0.64 0.2 293) 55%,
+    oklch(0.78 0.13 293) 100%
   );
-}
-
-.text-gradient-jam {
-  background: linear-gradient(92deg, #2ee06f 0%, #fed100 55%, #2ee06f 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
-/* hero glow — wider, softer, layered with the page ambient behind it */
+/* hero wash — a single, whisper-quiet violet tint behind the headline */
 .hero-bg {
-  background:
-    radial-gradient(68% 110% at 50% -22%, oklch(0.64 0.14 155 / 0.14), transparent 60%),
-    radial-gradient(42% 80% at 88% -12%, oklch(0.83 0.13 100 / 0.07), transparent 58%),
-    radial-gradient(44% 90% at 4% 6%, oklch(0.66 0.1 205 / 0.05), transparent 62%);
+  background: radial-gradient(
+    72% 120% at 50% -30%,
+    oklch(0.55 0.13 293 / 0.09),
+    transparent 62%
+  );
 }
 
-/* live pulse dot — keyed to the primary green */
+/* live pulse dot — keyed to the primary violet */
 @keyframes live-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(85, 209, 128, 0.5);
+    box-shadow: 0 0 0 0 oklch(0.78 0.14 293 / 45%);
   }
   70% {
-    box-shadow: 0 0 0 7px rgba(85, 209, 128, 0);
+    box-shadow: 0 0 0 7px oklch(0.78 0.14 293 / 0%);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(85, 209, 128, 0);
+    box-shadow: 0 0 0 0 oklch(0.78 0.14 293 / 0%);
   }
 }
 .live-dot {
   animation: live-pulse 1.8s ease-out infinite;
 }
 
-/* fresh arrival glow for newly synced mods */
+/* fresh arrival highlight for newly synced mods — brief violet border */
 @keyframes fresh-glow {
   0% {
-    border-color: rgba(254, 209, 0, 0.9);
-    box-shadow: 0 0 24px rgba(254, 209, 0, 0.25);
+    border-color: oklch(0.78 0.14 293 / 65%);
+    box-shadow: 0 0 20px oklch(0.7 0.16 293 / 18%);
   }
   100% {
     border-color: var(--border);
-    box-shadow: 0 0 0 rgba(254, 209, 0, 0);
+    box-shadow: 0 0 0 oklch(0.7 0.16 293 / 0%);
   }
 }
 .fresh-card {
-  animation: fresh-glow 6s ease-out forwards;
+  animation: fresh-glow 5s ease-out forwards;
 }
 
 /* card entrance — snappy fade/rise, staggered via inline delay */
@@ -476,12 +416,6 @@ body::after {
   .rise-in {
     animation: none;
   }
-  body::before {
-    animation: none;
-  }
-  .pointer-glow {
-    display: none;
-  }
 }
 
 /* thin custom scrollbar for long text areas + chip rails */
@@ -493,11 +427,11 @@ body::after {
   background: transparent;
 }
 .nice-scroll::-webkit-scrollbar-thumb {
-  background: oklch(0.4 0.012 165);
+  background: oklch(0.36 0.025 293);
   border-radius: 8px;
 }
 .nice-scroll::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.5 0.015 165);
+  background: oklch(0.45 0.035 293);
 }
 
 /* mobile chip rail: scrollable but with no visible scrollbar */
