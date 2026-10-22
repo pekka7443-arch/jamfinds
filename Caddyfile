@@ -1,4 +1,4 @@
-:81 {
+:{$CADDY_PORT} {
 	@transform_port_query {
 		query XTransformPort=*
 	}

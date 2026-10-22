@@ -53,7 +53,7 @@ cd "$BUILD_DIR" || exit 1
 
 ls -lah
 
-DEFAULT_PACKAGED_DB_PATH="/app/db/custom.db"
+DEFAULT_PACKAGED_DB_PATH="$BUILD_DIR/db/custom.db"
 DEFAULT_PACKAGED_DATABASE_URL="file:$DEFAULT_PACKAGED_DB_PATH"
 
 # Python 依赖在构建阶段安装进部署产物，不复用 Sandbox 的 /home/z/.venv。
@@ -73,8 +73,10 @@ if [ -f "./next-service-dist/server.js" ]; then
     
     # 设置环境变量
     export NODE_ENV=production
-    export PORT="${PORT:-3000}"
+    PLATFORM_PORT="${CADDY_PORT:-${PORT:-81}}"
+    export PORT="${NEXT_PORT:-3000}"
     export HOSTNAME="${HOSTNAME:-0.0.0.0}"
+    export CADDY_PORT="$PLATFORM_PORT"
     export DATABASE_URL="${DATABASE_URL:-$DEFAULT_PACKAGED_DATABASE_URL}"
 
     if [ "$DATABASE_URL" = "$DEFAULT_PACKAGED_DATABASE_URL" ]; then
