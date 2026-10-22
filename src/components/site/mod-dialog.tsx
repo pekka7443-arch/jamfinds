@@ -11,18 +11,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { KeyRound, Copy, ExternalLink, User2, ImageIcon, Check, Globe, Download, CheckCircle2, Loader2, Star } from "lucide-react";
+import { KeyRound, Copy, ExternalLink, User2, ImageIcon, Check, Globe, Download, Star } from "lucide-react";
 import { hostStyle, parseLinks, parseImages, CATEGORY_STYLES, type ModItem } from "@/lib/types";
 import { sourceDef } from "@/lib/sources";
 import { useFavorites } from "@/hooks/use-favorites";
+import { resolveLink } from "@/hooks/use-mod-download";
+import { DialogDownloadAction, DialogDownloadStatus } from "./download-button";
 import { categoryMeta } from "./mod-card";
 import { RelativeTime } from "./relative-time";
 
-type ResolveState = { mode: "loading" | "proxy" | "external"; reason?: string };
-
 export function ModDialog({ mod, open, onOpenChange }: { mod: ModItem | null; open: boolean; onOpenChange: (v: boolean) => void }) {
   const [copied, setCopied] = useState<string | null>(null);
-  const [resolves, setResolves] = useState<Record<string, ResolveState>>({});
   const { toggle: toggleSaved, isSaved } = useFavorites();
   const links = useMemo(() => (mod ? parseLinks(mod) : []), [mod]);
   const images = useMemo(() => (mod ? parseImages(mod) : []), [mod]);
@@ -36,21 +35,12 @@ export function ModDialog({ mod, open, onOpenChange }: { mod: ModItem | null; op
     [mod],
   );
 
-  // Ask the server which links can be downloaded through JamFinds itself.
-  // Missing entries render as "checking" — no synchronous state reset needed.
+  // Warm the shared resolution cache when the dialog opens. Results are
+  // stored by use-mod-download (deduped with any card clicks) — the
+  // per-link rows read the same store and render honest states.
   useEffect(() => {
     if (!open || links.length === 0) return;
-    const ctrl = new AbortController();
-    links.slice(0, 4).forEach(async (l) => {
-      try {
-        const r = await fetch(`/api/download/resolve?url=${encodeURIComponent(l.url)}`, { signal: ctrl.signal });
-        const j = (await r.json()) as { mode: string; reason?: string };
-        setResolves((prev) => ({ ...prev, [l.url]: { mode: j.mode === "proxy" ? "proxy" : "external", reason: j.reason } }));
-      } catch {
-        if (!ctrl.signal.aborted) setResolves((prev) => ({ ...prev, [l.url]: { mode: "external" } }));
-      }
-    });
-    return () => ctrl.abort();
+    links.slice(0, 4).forEach((l) => void resolveLink(l.url));
   }, [open, links]);
 
   if (!mod) return null;
@@ -161,9 +151,6 @@ export function ModDialog({ mod, open, onOpenChange }: { mod: ModItem | null; op
           ) : (
             links.map((l) => {
               const st = hostStyle(l.host);
-              const rs = resolves[l.url];
-              const proxied = rs?.mode !== "external"; // loading + unknown default to Download
-              const dlHref = `/api/download?url=${encodeURIComponent(l.url)}&name=${encodeURIComponent(fallbackName)}`;
               return (
                 <div key={l.url} className="rounded-lg border border-border bg-card/60 p-3 transition-colors duration-150 hover:border-foreground/20">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -184,35 +171,11 @@ export function ModDialog({ mod, open, onOpenChange }: { mod: ModItem | null; op
                         {copied === l.url ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
                         {copied === l.url ? "Copied" : "Copy"}
                       </Button>
-                      {proxied ? (
-                        <Button size="sm" className="h-9 gap-1 bg-primary text-primary-foreground hover:bg-primary/90 sm:h-8" asChild>
-                          <a href={dlHref} download>
-                            <Download className="h-3.5 w-3.5" /> Download
-                          </a>
-                        </Button>
-                      ) : (
-                        <Button size="sm" variant="outline" className="h-9 gap-1 sm:h-8" asChild>
-                          <a href={l.url} target="_blank" rel="noreferrer nofollow">
-                            <ExternalLink className="h-3.5 w-3.5" /> Open
-                          </a>
-                        </Button>
-                      )}
+                      <DialogDownloadAction url={l.url} name={fallbackName} />
                     </div>
                   </div>
-                  <p className="mt-2 flex items-center gap-1.5 text-[11px] leading-none text-muted-foreground">
-                    {rs === undefined || rs.mode === "loading" ? (
-                      <>
-                        <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" /> Checking direct download…
-                      </>
-                    ) : rs.mode === "proxy" ? (
-                      <span className="inline-flex items-center gap-1 text-primary">
-                        <CheckCircle2 className="h-3 w-3" aria-hidden="true" /> Downloads here on JamFinds — no redirects
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1">
-                        <ExternalLink className="h-3 w-3" aria-hidden="true" /> Opens {l.label} in a new tab{rs.reason ? ` — ${rs.reason}` : ""}
-                      </span>
-                    )}
+                  <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-snug text-muted-foreground">
+                    <DialogDownloadStatus url={l.url} fileLabel={l.label} />
                   </p>
                 </div>
               );

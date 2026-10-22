@@ -4,7 +4,13 @@
  * fall back to opening the host site ("external").
  *
  * GET /api/download/resolve?url=<encoded link>
- * -> { mode: "proxy" | "external", filename?: string, reason?: string }
+ * -> { mode: "proxy", filename?, size?, fileHost? }
+ *    { mode: "external", reason? }
+ *
+ * "proxy" means the file verifiably streams through JamFinds (the resolver
+ * 1-byte-probed the actual file before answering).
+ * "external" means the provider requires its own site — `reason` explains
+ * why, honestly, so the UI can say exactly that instead of pretending.
  *
  * Results share resolvers.ts' in-memory cache, so the subsequent
  * /api/download click reuses the resolution (no double scraping).
@@ -43,7 +49,12 @@ export async function GET(req: NextRequest) {
   try {
     const result = await resolveDownload(url)
     if (result.mode === "proxy") {
-      return Response.json({ mode: "proxy", filename: result.filename ?? null })
+      return Response.json({
+        mode: "proxy",
+        filename: result.filename ?? null,
+        size: result.size ?? null,
+        fileHost: result.fileHost ?? null,
+      })
     }
     return Response.json({ mode: "external", reason: result.reason })
   } catch {

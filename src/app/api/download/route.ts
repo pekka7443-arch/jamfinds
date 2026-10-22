@@ -21,7 +21,7 @@
  */
 
 import type { NextRequest } from "next/server"
-import { resolveDownload, PROXY_ALLOWED_HOSTS, probeFileUrl } from "@/lib/resolvers"
+import { resolveDownload, PROXY_ALLOWED_HOSTS, probeFileWithSize, invalidateResolve } from "@/lib/resolvers"
 import { classifyUrl, isDownloadLink } from "@/lib/links"
 import { assertPublicUrl, isInternalTarget } from "@/lib/url-guard"
 import { rateLimit, limitKey, tooManyRequests } from "@/lib/rate-limit"
@@ -136,10 +136,12 @@ async function streamUpstream(
     // 403/HTML while curl passes. Probe with the shared 1-byte curl helper
     // before spawning a streaming curl — if the file isn't really served
     // (IP-gated, dead), degrade to the external redirect instead of
-    // shipping a bogus .zip.
+    // shipping a bogus .zip. The probe also tells us whether the host
+    // honoured our Range request, so we never claim 206 we didn't get.
     const { spawn } = await import("node:child_process")
     const { Readable } = await import("node:stream")
-    if (!(await probeFileUrl(streamUrl, referer))) {
+    const probe = await probeFileWithSize(streamUrl, referer)
+    if (!probe.ok) {
       throw new Error(fetchStatusError || "upstream did not serve a file")
     }
 
@@ -162,14 +164,30 @@ async function streamUpstream(
     ]
     if (range) args.push("-H", `Range: ${range}`)
     const child = spawn("curl", args)
+
+    // The streaming curl can't echo upstream headers, so reconstruct the
+    // range headers from the probe: the client (and download managers) need
+    // Content-Range to know the total size of a partial response.
+    const outHeaders: Record<string, string> = {
+      "Content-Type": probe.contentType || "application/octet-stream",
+      "Content-Disposition": contentDisposition(fallbackName),
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    }
+    if (probe.acceptRanges) outHeaders["Accept-Ranges"] = "bytes"
+    if (range && probe.acceptRanges && probe.size) {
+      const m = /^bytes=(\d*)-(\d*)$/.exec(range.trim())
+      if (m) {
+        const start = m[1] ? Number(m[1]) : 0
+        const end = Math.min(m[2] ? Number(m[2]) : probe.size - 1, probe.size - 1)
+        if (start <= end && start < probe.size) {
+          outHeaders["Content-Range"] = `bytes ${start}-${end}/${probe.size}`
+        }
+      }
+    }
     return new Response(Readable.toWeb(child.stdout) as unknown as ReadableStream, {
-      status: range ? 206 : 200,
-      headers: {
-        "Content-Type": "application/octet-stream",
-        "Content-Disposition": contentDisposition(fallbackName),
-        "Cache-Control": "no-store",
-        "X-Content-Type-Options": "nosniff",
-      },
+      status: range && probe.acceptRanges ? 206 : 200,
+      headers: outHeaders,
     })
   }
 
@@ -234,9 +252,14 @@ export async function GET(req: NextRequest) {
 
   const finalName = resolved.filename || (/\.[a-z0-9]{2,5}$/i.test(fallbackName) ? fallbackName : `${fallbackName}.zip`)
   try {
-    return await streamUpstream(resolved.streamUrl, url, req.headers.get("range"), finalName)
+    // Prefer the referer the resolver learned (e.g. the BeamFinds mod page
+    // for dl.beamfinds.com streams) over the raw link.
+    return await streamUpstream(resolved.streamUrl, resolved.referer || url, req.headers.get("range"), finalName)
   } catch {
-    // Resolution said "file", upstream disagreed (HTML page, dead link...).
+    // Resolution said "file", upstream disagreed (HTML page, dead link,
+    // expired signed URL...). Drop the stale cache entry so the next click
+    // re-resolves, then degrade honestly to the original link.
+    invalidateResolve(url)
     return redirect(url)
   }
 }
