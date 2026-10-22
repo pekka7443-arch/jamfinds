@@ -259,3 +259,20 @@ Work Log:
 
 Stage Summary:
 - Both fixes applied + verified locally end-to-end with the real packaged artifact and existing SQLite DB (data preserved: 1294 mods). Production deploy of the fixed artifact triggered via platform finalize (Complete); live verification of https://jamfinds.space-z.ai/ documented in the report to the user. No destructive operations; no schema/UI/download/security changes.
+
+---
+Task ID: 13
+Agent: main (Z.ai)
+Task: Fix deployed-startup port collision (Caddy binding :3000 — CAExited: address already in use)
+
+Work Log:
+- Production log showed: "loading initial config: listening on :3000: bind: address already in use" → in the deployed container the platform sets PORT=3000 (the APP port), so the previous resolution "${CADDY_PORT:-${PORT:-81}}" expanded CADDY_PORT to 3000 and Caddy fought Next.js for :3000.
+- Fixed .zscripts/start.sh ingress resolution: PLATFORM_PORT="${CADDY_PORT:-${FC_CUSTOM_LISTEN_PORT:-81}}" — explicit CADDY_PORT > platform-provided FC_CUSTOM_LISTEN_PORT > default 81; PORT is NEVER used as ingress. Added fail-fast guard: if resolved ingress == Next port, print clear error and exit 1 before starting anything.
+- Caddyfile main upstream changed localhost:3000 -> 127.0.0.1:3000 (explicit, per spec). Transform-port handle ({query.XTransformPort}) untouched.
+- Verified /app/start.sh (22198B, root) and /app/Caddyfile (2650B, root) are platform-owned files, different from the artifact sources (.zscripts/start.sh 4.5KB + Caddyfile 504B); the deployed root files are the packaged copies — confirmed inside the rebuilt artifact.
+- Rebuilt artifact (BUILD_ID=jamfix3, 53MB): packaged start.sh + Caddyfile carry the fixes; next-service-dist/server.js + db/custom.db present (data preserved).
+- End-to-end verification via scripts/verify-jamfix3.sh (exact packaged startup, deployed-env sim: env -u DATABASE_URL -u CADDY_PORT PORT=3000 FC_CUSTOM_LISTEN_PORT=8181): packaged-DB branch active, Next ready on 3000, Caddy on 8181, homepage 200 (44.5KB) + /api/mods 200 (real data, total 1031) through BOTH ingress and direct port, SSRF guard 400, both processes UP after tests. Guard test: CADDY_PORT=3000 rejected with exit 1 + clear message, nothing started.
+- Dev server restored on :3000 after the test window.
+
+Stage Summary:
+- Deployed CAExited root cause eliminated: ingress can no longer resolve to 3000 (resolution order excludes PORT; guard enforces). Artifact jamfix3 verified end-to-end with the real packaged startup command. Publishing triggered via platform finalize; live verification results reported honestly to the user.

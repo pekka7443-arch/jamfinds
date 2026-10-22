@@ -73,9 +73,19 @@ if [ -f "./next-service-dist/server.js" ]; then
     
     # 设置环境变量
     export NODE_ENV=production
-    PLATFORM_PORT="${CADDY_PORT:-${PORT:-81}}"
+    # Ingress port resolution: explicit CADDY_PORT > FC_CUSTOM_LISTEN_PORT (provided by the platform) > default 81.
+    # Never use PORT as the ingress port: in the deployment environment, PORT=3000 is the application port for Next.js.
+    # If it is mistakenly treated as the ingress port, Caddy will compete with Next.js to bind 3000,
+    # causing bind: address already in use (CAExited).
+    PLATFORM_PORT="${CADDY_PORT:-${FC_CUSTOM_LISTEN_PORT:-81}}"
     export PORT="${NEXT_PORT:-3000}"
     export HOSTNAME="${HOSTNAME:-0.0.0.0}"
+    if [ "$PLATFORM_PORT" = "$PORT" ]; then
+        echo "❌ Ingress port conflict: CADDY_PORT=$PLATFORM_PORT is the same as Next.js port $PORT"
+        echo "   Next.js has already taken over $PORT; the ingress port must use a different port"
+        echo "   Please set CADDY_PORT or FC_CUSTOM_LISTEN_PORT to the platform ingress port (e.g., 81)"
+        exit 1
+    fi
     export CADDY_PORT="$PLATFORM_PORT"
     export DATABASE_URL="${DATABASE_URL:-$DEFAULT_PACKAGED_DATABASE_URL}"
 
