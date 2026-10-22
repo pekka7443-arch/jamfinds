@@ -276,3 +276,19 @@ Work Log:
 
 Stage Summary:
 - Deployed CAExited root cause eliminated: ingress can no longer resolve to 3000 (resolution order excludes PORT; guard enforces). Artifact jamfix3 verified end-to-end with the real packaged startup command. Publishing triggered via platform finalize; live verification results reported honestly to the user.
+
+---
+Task ID: 14
+Agent: main (Z.ai)
+Task: Deployment-state audit — fingerprints, pipeline evidence, no further publish triggers
+
+Work Log:
+- Recorded jamfix3 fingerprints: tarball a96cd6d227404f3f0cadb9f30f02f1907151bd5a8a9fc3d77712c161d417b2c0 (55369554 bytes, 19:53:25Z); packaged start.sh aeffce21dd498ee25f356bdd2e173884e4bd24531e76d2d4d33efa553da022ef (5297 B); packaged Caddyfile d843b6fee25da8b3d0f0e410427161d26a7fca5731368b77c475dc83392ab253 (504 B). jamfix2 start.sh: cd2c16dd17f48eff2414a400adedee40057f15a31de2faae0ef436b6ed3c4451 (4516 B).
+- Publish/build job identifiers: platform exposes NONE to the sandbox (Complete tool returns no job ID/status; MCP tool list has no deploy/publish/status capability; no build logs available). Stated explicitly to the user.
+- Live diagnostic (FC 412 error page embeds the last crashed instance's startup log incl. ls -lah): deployed artifact = start.sh 4.5K (4516 B) mtime Oct 22 19:48 = jamfix2, crash-looping "listening on :3000: bind: address already in use" (CAExited). jamfix3 NOT deployed.
+- Root cause of stuck rollout found in git: platform builds from its own snapshot commits; latest auto-commit 3efe8c4 (19:37:48Z) PREDATES the jamfix3 edits (Caddyfile 19:41, guard 19:47) — every pipeline build so far (19:48) used the pre-fix source. repo.tar snapshot even staler (16:58).
+- Committed current source as 4b5352c (20:39:41Z) so the pipeline's NEXT snapshot/build can include jamfix3. No publish triggered after user instruction; no further Complete calls.
+- Local verification of jamfix3 stands (Task 13): Caddy on FC_CUSTOM_LISTEN_PORT, Next on 3000, upstream 127.0.0.1:3000, homepage + /api/mods 200 via ingress, SSRF 400, guard rejects 3000.
+
+Stage Summary:
+- Deployment state is unambiguous: jamfix2 deployed and crash-looping; jamfix3 committed (4b5352c) but not yet captured by any platform snapshot; pipeline exposes no job status — only the 412-embedded startup log serves as deployed-artifact evidence. Unambiguous jamfix3 markers to watch: ls line "5.3K ... start.sh" in the 412 log, or disappearance of the :3000 CAExited crash (200 responses). Manual action: user Publish/Deploy from platform UI (or platform support) once the snapshot includes 4b5352c.
