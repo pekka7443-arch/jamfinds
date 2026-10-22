@@ -27,19 +27,22 @@ export function classifyUrl(url: string): { host: string; label: string } {
     return { host: "other", label: "Link" }
   }
   const h = parsed.hostname.replace(/^www\./, "").toLowerCase()
+  // Label-aware domain suffix check — a plain endsWith() would classify
+  // lookalikes like "evildrive.google.com" as Google Drive.
+  const isHost = (...domains: string[]) => domains.some((d) => h === d || h.endsWith(`.${d}`))
 
-  if (h.endsWith("modsfire.com")) return { host: "modsfire", label: "Modsfire" }
-  if (h.endsWith("mediafire.com")) return { host: "mediafire", label: "Mediafire" }
-  if (h.endsWith("drive.google.com") || h.endsWith("docs.google.com")) return { host: "gdrive", label: "Google Drive" }
-  if (h.endsWith("discord.gg") || h.endsWith("discord.com")) return { host: "discord", label: "Discord" }
-  if (h.endsWith("mega.nz") || h.endsWith("mega.io")) return { host: "mega", label: "MEGA" }
-  if (h.endsWith("workupload.com")) return { host: "workupload", label: "Workupload" }
-  if (h.endsWith("sharemods.com")) return { host: "sharemods", label: "ShareMods" }
-  if (h.endsWith("pixeldrain.com")) return { host: "pixeldrain", label: "Pixeldrain" }
-  if (h.endsWith("onedrive.live.com") || h.endsWith("1drv.ms")) return { host: "onedrive", label: "OneDrive" }
-  if (h.endsWith("dropbox.com")) return { host: "dropbox", label: "Dropbox" }
-  if (h === "beamfinds.com" || h.endsWith(".beamfinds.com")) return { host: "beamfinds", label: "BeamFinds" }
-  if (h === "beamfree.pro" || h.endsWith(".beamfree.pro")) return { host: "beamfree", label: "BeamFree" }
+  if (isHost("modsfire.com")) return { host: "modsfire", label: "Modsfire" }
+  if (isHost("mediafire.com")) return { host: "mediafire", label: "Mediafire" }
+  if (isHost("drive.google.com", "docs.google.com")) return { host: "gdrive", label: "Google Drive" }
+  if (isHost("discord.gg", "discord.com")) return { host: "discord", label: "Discord" }
+  if (isHost("mega.nz", "mega.io")) return { host: "mega", label: "MEGA" }
+  if (isHost("workupload.com")) return { host: "workupload", label: "Workupload" }
+  if (isHost("sharemods.com")) return { host: "sharemods", label: "ShareMods" }
+  if (isHost("pixeldrain.com")) return { host: "pixeldrain", label: "Pixeldrain" }
+  if (isHost("onedrive.live.com", "1drv.ms")) return { host: "onedrive", label: "OneDrive" }
+  if (isHost("dropbox.com")) return { host: "dropbox", label: "Dropbox" }
+  if (isHost("beamfinds.com")) return { host: "beamfinds", label: "BeamFinds" }
+  if (isHost("beamfree.pro")) return { host: "beamfree", label: "BeamFree" }
   return { host: "other", label: "Link" }
 }
 

@@ -11,7 +11,9 @@ export async function GET(req: NextRequest) {
   void ensureSync(60_000) // stale-while-revalidate: kick off sync if older than 60s
 
   const sp = req.nextUrl.searchParams
-  const q = (sp.get("q") ?? "").trim()
+  // Sanitize q: trim, cap length, strip LIKE wildcards so "100%" doesn't
+  // match everything (Prisma contains compiles to LIKE on SQLite).
+  const q = (sp.get("q") ?? "").replace(/[%_]/g, " ").replace(/\s+/g, " ").trim().slice(0, 100)
   const cat = sp.get("cat") ?? "all"
   const source = sp.get("source") ?? "all"
   const withLinks = sp.get("withLinks") === "1"
@@ -26,8 +28,9 @@ export async function GET(req: NextRequest) {
   // Main feed (cat=all) shows downloadable mods only — request posts live
   // exclusively in the Requests section (Task 4), and linkless/junk-link
   // posts live in their own "No download" bucket (Task 8) so Vehicles,
-  // Maps etc. only ever contain working mods.
-  if (cat && cat !== "all") where.category = cat
+  // Maps etc. only ever contain working mods. "saved" is a client-side
+  // pseudo-category — the API serves it like "all" and the browser filters.
+  if (cat && cat !== "all" && cat !== "saved") where.category = cat
   else where.category = { notIn: ["request", "no-link"] }
   if (source && source !== "all") where.source = source
   if (withLinks) where.hasLinks = true

@@ -161,3 +161,28 @@ Work Log:
 
 Stage Summary:
 - Deliverable: every download category (All mods, Vehicles, Maps, Skins, Parts & Tuning, Other) now contains ONLY posts with a real download link; the 138 linkless/junk-link posts (incl. the Porsche 911 crosspost spam from the user's screenshot) live in the new "No download" section; Requests untouched (109). Rule is enforced at sync time for all future posts and survives re-normalization.
+
+---
+Task ID: 9
+Agent: main (Z.ai)
+Task: World-class production-readiness mission — full audit, security hardening, brand identity, motion system, favorites, tests.
+
+Work Log:
+- Phase A audit: repo structure, all API routes, all lib modules, all site components, prisma schema, configs. Confirmed Task 8 state (no-link 138 / request 109 / vehicle 454, 817 rows) and found the open issues.
+- SECURITY (download proxy):
+  * Closed the open-redirect: /api/download previously 307'd ANY https URL; now unknown hosts get 400, and only known file-host patterns redirect (isDownloadLink gate).
+  * New src/lib/url-guard.ts — assertPublicUrl/safeRedirectTarget: https-only, blocks credentials-in-URL, localhost/*.local/*.internal, cloud metadata, private/link-local/CGNAT/benchmark IPv4 + IPv6 literals (incl. ::ffff: mapped, URL-normalized ::ffff:a00:1 form).
+  * streamUpstream rewritten: redirect:"manual" with per-hop re-validation (max 4 hops), 30s header timeout, HTML content-type refused instead of served as bogus .zip, curl fallback hardened (--max-time 900, --proto/--proto-redir =https — note: --redir-protocols is unknown to this curl 8.14.1, hit during testing).
+  * Resolver-level: modsfire Location + mediafire direct URL now pass assertPublicUrl; shared curlProbeFile() (1-byte range probe) verifies the file URL is ACTUALLY served before resolve reports "proxy" — modsfire's file edge started 403ing the sandbox IP (Cloudflare, empty body) mid-task, which the old flow masked by promising a Download that degraded to a redirect. Resolve is now honest: external + reason.
+  * Rate limiting (new src/lib/rate-limit.ts, sliding window per IP): /api/download 12/min, /api/download/resolve 30/min, POST /api/sync 2/10s + 8/5min. Verified live (3rd sync POST → 429 with Retry-After).
+  * classifyUrl + resolver dispatch: endsWith() → label-aware suffix match (evildrive.google.com / evilmediafire.com lookalikes were classifying as real hosts — caught by new unit tests).
+- CORRECTNESS: fixed pre-existing sync.ts rawTitle type errors (NormalizedRow); next.config ignoreBuildErrors:false + reactStrictMode:true; removed dead GET /api hello-world route; db.ts query logging dev-only; /api/mods q sanitization (LIKE wildcards stripped, 100-char cap); fetchBeamfindsFull page cap (60); mod-dialog setState-in-effect lint fix.
+- CONFIG: tsconfig excludes examples/skills/scripts/tests; eslint ignores scripts/tests/download/upload → lint 2038 problems → 0.
+- BRAND: kept JamFinds (evaluation in final report); new src/lib/brand.ts single source; replaced sandbox "Z" logo with custom mark (green scan arcs + gold found-dot) as src/app/icon.svg + public/logo.svg + inline header monogram.
+- MOTION: tokens (--motion-fast/base/slow, --ease-soft); pointer-reactive ambient glow (ambient-glow.tsx — single fixed layer, rAF translate3d only, lerp, no React state, pointer:fine + reduced-motion gated, paused on tab hide); 48s ambient drift on body::before; hero rise-in stagger; card grid stagger (25ms/first 12); Button active:scale press feedback.
+- FEATURES: saved mods (use-favorites.ts useSyncExternalStore + localStorage, star on cards + dialog, Saved chip with count, client-side saved view + honest empty state, API maps cat=saved → all); "/" focuses search with kbd hint; skip-to-content link.
+- TESTS: 46 bun tests (url-guard security cases, classifyUrl/extractLinks/cleanTitle, download-link rules) — all pass; src/bun-test.d.ts for tsc.
+- VERIFIED: tsc clean, eslint clean, 46/46 tests, live security probes (400 open-redirect, 400 internal, 307 known-host fallback), proxied download end-to-end via GDrive (206, PK zip bytes, "Gavril Scout .zip", 158MB range), honest resolve for the blocked modsfire link, browser desktop 1440 + mobile 390 zero overflow zero console errors, saved flow + "/" shortcut + dialog star + persistence. Screenshots download/t9-*.png.
+
+Stage Summary:
+- JamFinds is production-hardened: SSRF-guarded, rate-limited, redirect-safe download proxy with honest capability reporting; 46-test suite; zero type/lint errors; brand + motion system in place; Saved feature shipped. Known upstream limitation: modsfire's file CDN currently 403s this sandbox IP (Cloudflare) — proxy path proven via Google Drive instead; code self-heals when the block lifts.

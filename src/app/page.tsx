@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, PackageOpen, Satellite, WifiOff } from "lucide-react";
+import { Loader2, PackageOpen, Satellite, WifiOff, Star } from "lucide-react";
 import type { ModItem, ModsResponse } from "@/lib/types";
 import { Header } from "@/components/site/header";
 import { Hero } from "@/components/site/hero";
@@ -12,6 +12,7 @@ import { Filters, DEFAULT_FILTERS, type FilterState } from "@/components/site/fi
 import { ModCard, ModCardSkeleton } from "@/components/site/mod-card";
 import { ModDialog } from "@/components/site/mod-dialog";
 import { Footer } from "@/components/site/footer";
+import { useFavorites } from "@/hooks/use-favorites";
 
 const POLL_MS = 20_000;
 
@@ -31,6 +32,7 @@ export default function Home() {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [selected, setSelected] = useState<ModItem | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const { saved: savedIds } = useFavorites();
 
   const queryKey = useMemo(() => ["mods", { q, ...filters }] as const, [q, filters]);
 
@@ -70,6 +72,13 @@ export default function Home() {
   const pages = data?.pages ?? [];
   const latest = pages[0];
   const mods = useMemo(() => pages.flatMap((p) => p.mods), [pages]);
+  // "Saved" is a client-side pseudo-category: filter the loaded set by the
+  // device's starred mods. Other filters are applied server-side.
+  const savedView = filters.cat === "saved";
+  const shownMods = useMemo(
+    () => (savedView ? mods.filter((m) => savedIds.has(m.id)) : mods),
+    [savedView, mods, savedIds],
+  );
   const serverNow = latest?.serverNow ?? new Date().toISOString();
 
   /* ---------- new-mod detection + toast ---------- */
@@ -187,7 +196,8 @@ export default function Home() {
               filters={filters}
               onChange={setFilters}
               data={latest}
-              resultCount={resultCount}
+              resultCount={savedView ? shownMods.length : resultCount}
+              savedCount={savedIds.size}
             />
           </div>
 
@@ -249,11 +259,31 @@ export default function Home() {
                 Reset filters
               </Button>
             </div>
+          ) : shownMods.length === 0 ? (
+            /* Saved view with nothing starred (or nothing loaded yet) */
+            <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-card/50 p-10 text-center sm:p-12">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gold/15">
+                <Star className="h-6 w-6 text-gold" aria-hidden="true" />
+              </span>
+              <div>
+                <p className="tt-h2 text-foreground">Nothing saved yet</p>
+                <p className="mx-auto mt-1.5 max-w-sm text-sm leading-relaxed text-muted-foreground">
+                  Tap the star on any mod card to keep it here — saved mods live on this device.
+                </p>
+              </div>
+            </div>
           ) : (
             <>
               <div key={filterKey} className={gridClasses} aria-live="polite">
-                {mods.map((m) => (
-                  <ModCard key={m.id} mod={m} serverNow={serverNow} fresh={isFresh(m.id)} onOpen={openMod} />
+                {shownMods.map((m, i) => (
+                  <ModCard
+                    key={m.id}
+                    mod={m}
+                    serverNow={serverNow}
+                    fresh={isFresh(m.id)}
+                    onOpen={openMod}
+                    style={{ animationDelay: `${Math.min(i, 11) * 25}ms` }}
+                  />
                 ))}
               </div>
               {hasNextPage && (
@@ -269,7 +299,7 @@ export default function Home() {
                         <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Loading…
                       </>
                     ) : (
-                      `Load more mods${resultCount - mods.length > 0 ? ` (${resultCount - mods.length} remaining)` : ""}`
+                      `Load more mods${!savedView && resultCount - mods.length > 0 ? ` (${resultCount - mods.length} remaining)` : ""}`
                     )}
                   </Button>
                 </div>

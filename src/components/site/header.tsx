@@ -27,6 +27,13 @@ export function Header({ sync, refreshing, onRefresh }: HeaderProps) {
             className="flex shrink-0 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="JamFinds home"
           >
+            {/* Brand monogram — live "found it" pulse mark (mirrors app/icon.svg) */}
+            <svg width="22" height="22" viewBox="0 0 64 64" aria-hidden="true" className="shrink-0">
+              <rect width="64" height="64" rx="14" fill="#0b1410" />
+              <path d="M17 41a19 19 0 0 1 30-15" stroke="#2ee06f" strokeWidth="4.5" fill="none" strokeLinecap="round" opacity="0.42" />
+              <path d="M23 42a12.5 12.5 0 0 1 20-9.5" stroke="#2ee06f" strokeWidth="4.5" fill="none" strokeLinecap="round" opacity="0.85" />
+              <circle cx="43.5" cy="22" r="5.5" fill="#fed100" />
+            </svg>
             <span className="font-[family-name:var(--font-display)] text-lg tracking-tight">
               <span className="text-foreground">Jam</span>
               <span className="text-gradient-jam">Finds</span>

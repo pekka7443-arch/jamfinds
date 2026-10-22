@@ -14,6 +14,7 @@ import {
   Megaphone,
   Download,
   Unlink,
+  Star,
 } from "lucide-react";
 import {
   hostStyle,
@@ -25,6 +26,7 @@ import {
   type ModItem,
 } from "@/lib/types";
 import { sourceDef } from "@/lib/sources";
+import { useFavorites } from "@/hooks/use-favorites";
 import { RelativeTime } from "./relative-time";
 
 const CATEGORY_META: Record<string, { label: string; icon: React.ReactNode }> = {
@@ -59,15 +61,19 @@ export function ModCard({
   serverNow,
   fresh,
   onOpen,
+  style,
 }: {
   mod: ModItem;
   serverNow: string;
   fresh: boolean;
   onOpen: (mod: ModItem) => void;
+  style?: React.CSSProperties;
 }) {
   const links = useMemo(() => parseLinks(mod), [mod]);
   const images = useMemo(() => parseImages(mod), [mod]);
   const [imgFailed, setImgFailed] = useState(false);
+  const { toggle: toggleSaved, isSaved } = useFavorites();
+  const saved = isSaved(mod.id);
 
   const thumb = mod.thumbnail ?? images[0] ?? null;
   const cat = categoryMeta(mod.category);
@@ -80,6 +86,7 @@ export function ModCard({
 
   return (
     <article
+      style={style}
       className={`card-in surface-card surface-card-hover group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-xl bg-card/80 outline-none transition-all duration-200 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring active:translate-y-0 active:scale-[0.995] ${
         fresh ? "fresh-card" : ""
       }`}
@@ -125,7 +132,7 @@ export function ModCard({
           </div>
         )}
 
-        {/* top row: category left, NEW right */}
+        {/* top row: category left, NEW + save right */}
         <div className="absolute inset-x-2 top-2 flex items-start justify-between gap-2">
           <span
             className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold leading-[1.6] backdrop-blur-sm ${catCls}`}
@@ -133,11 +140,27 @@ export function ModCard({
             {cat.icon}
             {cat.label}
           </span>
-          {isNew && (
-            <span className="rounded-full bg-gold px-1.5 py-0.5 text-[10px] font-bold leading-[1.6] text-black shadow-sm">
-              NEW
-            </span>
-          )}
+          <span className="flex shrink-0 items-center gap-1">
+            {isNew && (
+              <span className="rounded-full bg-gold px-1.5 py-0.5 text-[10px] font-bold leading-[1.6] text-black shadow-sm">
+                NEW
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleSaved(mod.id);
+              }}
+              onKeyDown={(e) => e.stopPropagation()}
+              aria-pressed={saved}
+              aria-label={saved ? `Remove ${mod.title} from saved` : `Save ${mod.title}`}
+              title={saved ? "Saved — tap to remove" : "Save this mod"}
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-black/45 text-zinc-300 backdrop-blur-sm transition-colors duration-150 hover:bg-black/65 hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Star className={`h-3.5 w-3.5 ${saved ? "fill-gold text-gold" : ""}`} aria-hidden="true" />
+            </button>
+          </span>
         </div>
 
         {/* host badges strip + quick download (real download links only) */}

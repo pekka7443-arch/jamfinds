@@ -27,6 +27,7 @@
 
 import { execFile } from "node:child_process"
 import { randomUUID } from "node:crypto"
+import { assertPublicUrl } from "@/lib/url-guard"
 
 const BROWSER_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
@@ -129,6 +130,49 @@ function firstMatch(re: RegExp, text: string): string | null {
   return m?.[1] ?? null
 }
 
+/**
+ * Cheap 1-byte probe: does this URL actually serve a file (2xx/206, not
+ * HTML)? Used before we claim "downloadable through JamFinds" — some CDNs
+ * (modsfire's file edge included) answer the resolver chain with a Location
+ * but then 403 the file itself (IP/JS-gated). Curl is used for the probe so
+ * TLS-fingerprint-gated CDNs don't produce false negatives.
+ */
+function curlProbeFile(url: string, referer: string, timeoutMs = 20_000): Promise<boolean> {
+  return new Promise((resolve) => {
+    const args = [
+      "-s",
+      "--http1.1",
+      "--max-time",
+      String(Math.ceil(timeoutMs / 1000)),
+      "--max-redirs",
+      "4",
+      "--proto",
+      "=https",
+      "--proto-redir",
+      "=https",
+      "-A",
+      BROWSER_UA,
+      "-e",
+      referer,
+      "-r",
+      "0-0",
+      "-o",
+      "/dev/null",
+      "-w",
+      "%{http_code} %{content_type}",
+      url,
+    ]
+    execFile("curl", args, { timeout: timeoutMs + 5_000 }, (err, stdout) => {
+      const m = String(stdout).match(/^(\d{3})\s+(\S*)/)
+      const status = m ? Number(m[1]) : 0
+      const ctype = (m?.[2] ?? "").toLowerCase()
+      resolve(!err && status >= 200 && status < 300 && !ctype.includes("text/html"))
+    })
+  })
+}
+
+export { curlProbeFile as probeFileUrl }
+
 /* ------------------------------------------------------------------ */
 /* Per-host resolvers                                                  */
 /* ------------------------------------------------------------------ */
@@ -154,11 +198,23 @@ async function resolveModsfire(pageUrl: string): Promise<ResolveResult> {
     if (!loc || !/^https:\/\//.test(loc)) {
       return { mode: "external", reason: "Modsfire did not return a file URL" }
     }
+    // Validate the signed URL before we ever fetch it (SSRF guard).
+    try {
+      assertPublicUrl(loc)
+    } catch {
+      return { mode: "external", reason: "Modsfire returned an unexpected file URL" }
+    }
+    // Verify the file URL is actually fetchable — their file edge sometimes
+    // 403s (IP/JS-gated) right after handing out the Location. Without this
+    // check the UI would promise a direct download that degrades to a redirect.
+    if (!(await curlProbeFile(loc, pageUrl))) {
+      return { mode: "external", reason: "Modsfire is not serving this file directly right now" }
+    }
     return {
       mode: "proxy",
       streamUrl: loc,
       filename: basenameFromUrl(loc),
-      ttlMs: 8 * 60_000, // signed URL is valid for 600 s
+      ttlMs: 6 * 60_000, // signed URL is valid for 600 s — leave margin
     }
   } catch {
     return { mode: "external", reason: "Modsfire unreachable" }
@@ -200,10 +256,17 @@ async function resolveMediafire(url: string): Promise<ResolveResult> {
     const res = await curl([...baseCurlArgs(jar), ...FOLLOW, url])
     const direct = firstMatch(/https:\/\/download\d*\.mediafire\.com\/[^\s"'<>\\]+/, res.body)
     if (!direct) return { mode: "external", reason: "Mediafire direct link not found" }
+    const streamUrl = direct.replace(/&amp;/g, "&")
+    // Validate before returning (SSRF guard — defense in depth).
+    try {
+      assertPublicUrl(streamUrl)
+    } catch {
+      return { mode: "external", reason: "Mediafire returned an unexpected link" }
+    }
     return {
       mode: "proxy",
-      streamUrl: direct.replace(/&amp;/g, "&"),
-      filename: basenameFromUrl(direct),
+      streamUrl,
+      filename: basenameFromUrl(streamUrl),
       ttlMs: 20 * 60_000,
     }
   } catch {
@@ -253,25 +316,28 @@ export async function resolveDownload(url: string): Promise<ResolveResult> {
   if (parsed.protocol !== "https:") return { mode: "external", reason: "Non-https link" }
 
   const h = parsed.hostname.replace(/^www\./, "").toLowerCase()
+  // Label-aware suffix match — a plain endsWith() would let lookalike
+  // domains (e.g. "evilmediafire.com") reach the resolvers.
+  const isHost = (...domains: string[]) => domains.some((d) => h === d || h.endsWith(`.${d}`))
   let result: ResolveResult
 
-  if (h.endsWith("modsfire.com") && /^\/[A-Za-z0-9]{6,}$/.test(parsed.pathname)) {
+  if (isHost("modsfire.com") && /^\/[A-Za-z0-9]{6,}$/.test(parsed.pathname)) {
     result = await resolveModsfire(url)
-  } else if (h.endsWith("drive.google.com") || h.endsWith("docs.google.com")) {
+  } else if (isHost("drive.google.com", "docs.google.com")) {
     result = /\/folders\//.test(parsed.pathname)
       ? { mode: "external", reason: "Drive folder — open it to pick a file" }
       : await resolveGdrive(url)
-  } else if (h.endsWith("pixeldrain.com") && /^\/[ul]\/[A-Za-z0-9]+/.test(parsed.pathname)) {
+  } else if (isHost("pixeldrain.com") && /^\/[ul]\/[A-Za-z0-9]+/.test(parsed.pathname)) {
     result = await resolvePixeldrain(url)
-  } else if (h.endsWith("mediafire.com")) {
+  } else if (isHost("mediafire.com")) {
     result = await resolveMediafire(url)
-  } else if (h.endsWith("dropbox.com")) {
+  } else if (isHost("dropbox.com")) {
     result = resolveDropbox(url)
-  } else if (h.endsWith("cdn.discordapp.com") && parsed.pathname.startsWith("/attachments/")) {
+  } else if (isHost("cdn.discordapp.com") && parsed.pathname.startsWith("/attachments/")) {
     result = { mode: "proxy", streamUrl: url, ttlMs: 30 * 60_000 }
-  } else if (h.endsWith("discord.gg") || h.endsWith("discord.com")) {
+  } else if (isHost("discord.gg", "discord.com")) {
     result = { mode: "external", reason: "Discord invite — join to get the file" }
-  } else if (h.endsWith("mega.nz") || h.endsWith("mega.io")) {
+  } else if (isHost("mega.nz", "mega.io")) {
     result = { mode: "external", reason: "MEGA encrypts downloads in-browser" }
   } else {
     result = { mode: "external", reason: "Host does not allow direct downloads" }

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- JamFinds mark: a live "found it" pulse over a dark tile —
+       gold dot = the mod being found, green arcs = the live scan. -->
+  <rect width="64" height="64" rx="14" fill="#0b1410"/>
+  <path d="M17 41a19 19 0 0 1 30-15" stroke="#2ee06f" stroke-width="4.5" fill="none" stroke-linecap="round" opacity="0.42"/>
+  <path d="M23 42a12.5 12.5 0 0 1 20-9.5" stroke="#2ee06f" stroke-width="4.5" fill="none" stroke-linecap="round" opacity="0.85"/>
+  <circle cx="43.5" cy="22" r="5.5" fill="#fed100"/>
+</svg>

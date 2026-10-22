@@ -3,6 +3,8 @@ import { Geist, Geist_Mono, Archivo_Black } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Providers } from "@/components/providers";
+import { AmbientGlow } from "@/components/site/ambient-glow";
+import { BRAND } from "@/lib/brand";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,9 +23,8 @@ const archivoBlack = Archivo_Black({
 });
 
 export const metadata: Metadata = {
-  title: "JamFinds — Live BeamNG Mods from Reddit, BeamFinds & BeamFree",
-  description:
-    "A live BeamNG.drive mod finder. Automatically syncs new releases from r/Beamng_Jamaica, r/BeamNGpiratemods, r/beamng_leakedmods, r/BeamNG_Leaked_M0ds, BeamFinds and BeamFree — and auto-decodes base64 download links in real time.",
+  title: `${BRAND.name} — Live BeamNG Mods from Reddit, BeamFinds & BeamFree`,
+  description: BRAND.description,
   keywords: [
     "BeamNG",
     "BeamNG.drive",
@@ -37,10 +38,10 @@ export const metadata: Metadata = {
     "live mods",
   ],
   openGraph: {
-    title: "JamFinds — Live BeamNG Mods, Multi-Source",
+    title: `${BRAND.name} — Live BeamNG Mods, Multi-Source`,
     description:
       "Live BeamNG mods auto-synced from 4 subreddits + BeamFinds + BeamFree, with decoded download links.",
-    siteName: "JamFinds",
+    siteName: BRAND.name,
     type: "website",
   },
 };
@@ -59,6 +60,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${archivoBlack.variable} antialiased bg-background text-foreground min-h-screen flex flex-col`}
       >
+        <a href="#main" className="skip-link">
+          Skip to content
+        </a>
+        <AmbientGlow />
         <Providers>{children}</Providers>
         <Toaster />
       </body>

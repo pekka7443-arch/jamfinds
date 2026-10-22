@@ -152,6 +152,82 @@
 }
 
 /* ------------------------------------------------------------------ */
+/* Motion tokens — one duration/easing vocabulary for every animation. */
+/* ------------------------------------------------------------------ */
+
+:root {
+  --motion-fast: 150ms;
+  --motion-base: 220ms;
+  --motion-slow: 420ms;
+  --ease-soft: cubic-bezier(0.22, 0.9, 0.3, 1);
+}
+
+/* ------------------------------------------------------------------ */
+/* Pointer-reactive ambient glow — one fixed, GPU-translated layer that */
+/* drifts toward the cursor (JS in ambient-glow.tsx). Touch devices and */
+/* reduced-motion users never see it.                                   */
+/* ------------------------------------------------------------------ */
+
+.pointer-glow {
+  position: fixed;
+  top: -26rem;
+  left: -26rem;
+  width: 52rem;
+  height: 52rem;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 700ms ease;
+  will-change: transform;
+  background: radial-gradient(
+    closest-side,
+    oklch(0.72 0.13 155 / 0.08),
+    oklch(0.72 0.13 155 / 0.028) 46%,
+    transparent 72%
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Page/hero entrance — short rise-in with staggered delay utilities    */
+/* ------------------------------------------------------------------ */
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.rise-in {
+  animation: rise-in var(--motion-slow) var(--ease-soft) both;
+}
+.rise-in-1 { animation-delay: 50ms; }
+.rise-in-2 { animation-delay: 130ms; }
+.rise-in-3 { animation-delay: 210ms; }
+
+/* Skip-to-content — hidden until keyboard-focused */
+.skip-link {
+  position: fixed;
+  top: -4rem;
+  left: 1rem;
+  z-index: 100;
+  border-radius: 0.5rem;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow: 0 8px 24px oklch(0 0 0 / 35%);
+  transition: top var(--motion-fast) var(--ease-soft);
+}
+.skip-link:focus-visible {
+  top: 0.75rem;
+}
+
+/* ------------------------------------------------------------------ */
 /* Ambient page background — soft depth, zero components               */
 /* Two fixed pseudo-layers: wide radial glows + a faint film grain.    */
 /* Both sit behind all content (z-index -1) and never intercept input. */
@@ -168,6 +244,19 @@ body::before {
     radial-gradient(44rem 30rem at 86% -6rem, oklch(0.8 0.14 100 / 0.05), transparent 64%),
     radial-gradient(46rem 30rem at -8% 26%, oklch(0.6 0.09 210 / 0.045), transparent 60%),
     radial-gradient(40rem 28rem at 108% 78%, oklch(0.62 0.11 158 / 0.04), transparent 62%);
+  /* barely-there ambient drift — transform-only, 48s cycle */
+  animation: ambient-drift 48s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes ambient-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, 10px, 0) scale(1.012);
+  }
 }
 
 body::after {
@@ -281,6 +370,7 @@ body::after {
 .cat-info { --bh: 245; }
 .cat-other { --bh: 270; --bc: 0.028; }
 .cat-nolink { --bh: 256; --bc: 0.035; }
+.cat-saved { --bh: 95; }
 
 /* file hosts */
 .host-modsfire { --bh: 75; }
@@ -376,14 +466,21 @@ body::after {
   }
 }
 .card-in {
-  animation: card-in 0.28s cubic-bezier(0.22, 0.9, 0.3, 1) both;
+  animation: card-in 0.28s var(--ease-soft) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .live-dot,
   .fresh-card,
-  .card-in {
+  .card-in,
+  .rise-in {
     animation: none;
+  }
+  body::before {
+    animation: none;
+  }
+  .pointer-glow {
+    display: none;
   }
 }
 

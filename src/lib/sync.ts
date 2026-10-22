@@ -85,8 +85,14 @@ function gdriveThumbFromLinks(links: { url: string; host: string }[]): string | 
   return id ? `https://lh3.googleusercontent.com/d/${id}=w400` : null
 }
 
+type NormalizedRow = NormalizedEntry & {
+  category: string
+  hasLinks: boolean
+  rawTitle: string
+}
+
 /** Normalize a raw entry: clean title, extract links, infer category. */
-function normalize(entry: NormalizedEntry): NormalizedEntry & { category: string; hasLinks: boolean } {
+function normalize(entry: NormalizedEntry): NormalizedRow {
   const isReddit = entry.id.startsWith("t3_")
   const text = entry.text.slice(0, 4000)
   const links =

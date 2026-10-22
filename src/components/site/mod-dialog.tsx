@@ -11,9 +11,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { KeyRound, Copy, ExternalLink, User2, ImageIcon, Check, Globe, Download, CheckCircle2, Loader2 } from "lucide-react";
+import { KeyRound, Copy, ExternalLink, User2, ImageIcon, Check, Globe, Download, CheckCircle2, Loader2, Star } from "lucide-react";
 import { hostStyle, parseLinks, parseImages, CATEGORY_STYLES, type ModItem } from "@/lib/types";
 import { sourceDef } from "@/lib/sources";
+import { useFavorites } from "@/hooks/use-favorites";
 import { categoryMeta } from "./mod-card";
 import { RelativeTime } from "./relative-time";
 
@@ -22,6 +23,7 @@ type ResolveState = { mode: "loading" | "proxy" | "external"; reason?: string };
 export function ModDialog({ mod, open, onOpenChange }: { mod: ModItem | null; open: boolean; onOpenChange: (v: boolean) => void }) {
   const [copied, setCopied] = useState<string | null>(null);
   const [resolves, setResolves] = useState<Record<string, ResolveState>>({});
+  const { toggle: toggleSaved, isSaved } = useFavorites();
   const links = useMemo(() => (mod ? parseLinks(mod) : []), [mod]);
   const images = useMemo(() => (mod ? parseImages(mod) : []), [mod]);
   const cat = mod ? categoryMeta(mod.category) : null;
@@ -35,10 +37,10 @@ export function ModDialog({ mod, open, onOpenChange }: { mod: ModItem | null; op
   );
 
   // Ask the server which links can be downloaded through JamFinds itself.
+  // Missing entries render as "checking" — no synchronous state reset needed.
   useEffect(() => {
     if (!open || links.length === 0) return;
     const ctrl = new AbortController();
-    setResolves(Object.fromEntries(links.slice(0, 4).map((l) => [l.url, { mode: "loading" as const }])));
     links.slice(0, 4).forEach(async (l) => {
       try {
         const r = await fetch(`/api/download/resolve?url=${encodeURIComponent(l.url)}`, { signal: ctrl.signal });
@@ -84,6 +86,16 @@ export function ModDialog({ mod, open, onOpenChange }: { mod: ModItem | null; op
                 <KeyRound className="mr-1 h-3 w-3" aria-hidden="true" /> {decodedCount} decoded
               </Badge>
             )}
+            <button
+              type="button"
+              onClick={() => toggleSaved(mod.id)}
+              aria-pressed={isSaved(mod.id)}
+              aria-label={isSaved(mod.id) ? "Remove from saved" : "Save this mod"}
+              title={isSaved(mod.id) ? "Saved — tap to remove" : "Save this mod"}
+              className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-secondary/60 text-muted-foreground transition-colors duration-150 hover:border-gold/50 hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Star className={`h-4 w-4 ${isSaved(mod.id) ? "fill-gold text-gold" : ""}`} aria-hidden="true" />
+            </button>
           </div>
           <DialogTitle className="pr-6 text-left text-lg leading-snug">{mod.title}</DialogTitle>
           <DialogDescription className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">

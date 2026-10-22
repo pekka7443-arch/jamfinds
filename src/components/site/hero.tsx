@@ -44,14 +44,14 @@ export function Hero({ data, isLoading }: HeroProps) {
     <section className="hero-bg border-b border-border">
       <div className="mx-auto max-w-7xl px-4 pb-8 pt-10 sm:px-6">
         <div className="flex flex-col items-start gap-3">
-          <span className="inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-semibold text-gold">
+          <span className="rise-in inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-semibold text-gold">
             🇯🇲 BeamNG.drive · live multi-source hub
           </span>
-          <h1 className="tt-display max-w-3xl">
+          <h1 className="tt-display rise-in rise-in-1 max-w-3xl">
             Every BeamNG mod drop,
             <br className="hidden sm:block" /> <span className="text-gradient-jam">the second it lands.</span>
           </h1>
-          <p className="tt-body max-w-2xl text-muted-foreground">
+          <p className="tt-body rise-in rise-in-2 max-w-2xl text-muted-foreground">
             JamFinds watches four subreddits and two mod sites around the clock — r/Beamng_Jamaica,
             r/BeamNGpiratemods, r/beamng_leakedmods, r/BeamNG_Leaked_M0ds, BeamFinds and BeamFree — and pulls each
             new release the moment it appears. Base64 mod codes from Reddit are decoded automatically: no decoder
@@ -59,7 +59,7 @@ export function Hero({ data, isLoading }: HeroProps) {
           </p>
         </div>
 
-        <div className="mt-7 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="rise-in rise-in-3 mt-7 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <StatCard
             icon={<Database className="h-3.5 w-3.5 text-primary" />}
             label="Mods indexed"

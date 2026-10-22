@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { Search, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -25,14 +26,32 @@ interface FiltersProps {
   onChange: (f: FilterState) => void;
   data: ModsResponse | undefined;
   resultCount: number;
+  savedCount: number;
 }
 
 const chipBase =
   "inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border px-4 text-[13px] font-medium leading-none transition-all duration-150 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-h-9 sm:px-3.5 sm:text-xs";
 
-export function Filters({ query, onQueryChange, filters, onChange, data, resultCount }: FiltersProps) {
+export function Filters({ query, onQueryChange, filters, onChange, data, resultCount, savedCount }: FiltersProps) {
   const catLabel = (key: string) => CATEGORIES.find((c) => c.key === key)?.label ?? key;
   const isFiltered = filters.cat !== "all" || filters.withLinks || filters.source !== "all" || query.trim() !== "";
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  // "/" focuses search — only when the user isn't already typing somewhere.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) {
+        return;
+      }
+      e.preventDefault();
+      searchRef.current?.focus();
+      searchRef.current?.select();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   return (
     <div className="surface-card rounded-xl bg-card/60 p-3 sm:p-4">
@@ -44,14 +63,16 @@ export function Filters({ query, onQueryChange, filters, onChange, data, resultC
             aria-hidden="true"
           />
           <Input
+            ref={searchRef}
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
             placeholder="Search mods, cars, maps, authors..."
-            className="h-11 border-input bg-secondary/50 pl-9 pr-9 text-[15px] transition-colors focus-visible:bg-secondary/70 sm:h-10 sm:text-sm"
+            className="h-11 border-input bg-secondary/50 pl-9 pr-16 text-[15px] transition-colors focus-visible:bg-secondary/70 sm:h-10 sm:text-sm"
             aria-label="Search mods"
+            aria-keyshortcuts="/"
             enterKeyHint="search"
           />
-          {query && (
+          {query ? (
             <button
               onClick={() => onQueryChange("")}
               className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
@@ -59,6 +80,13 @@ export function Filters({ query, onQueryChange, filters, onChange, data, resultC
             >
               <X className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
+          ) : (
+            <kbd
+              className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 items-center rounded border border-border bg-secondary/70 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-muted-foreground sm:inline-flex"
+              aria-hidden="true"
+            >
+              /
+            </kbd>
           )}
         </div>
 
@@ -105,6 +133,7 @@ export function Filters({ query, onQueryChange, filters, onChange, data, resultC
         >
           {CATEGORIES.map((c) => {
             const active = filters.cat === c.key;
+            const count = c.key === "saved" && savedCount > 0 ? ` (${savedCount})` : "";
             return (
               <button
                 key={c.key}
@@ -117,6 +146,7 @@ export function Filters({ query, onQueryChange, filters, onChange, data, resultC
                 aria-pressed={active}
               >
                 {c.label}
+                {count}
               </button>
             );
           })}
@@ -140,7 +170,8 @@ export function Filters({ query, onQueryChange, filters, onChange, data, resultC
         <p className="text-xs text-muted-foreground">
           <span className="font-semibold text-foreground">{resultCount}</span>{" "}
           result{resultCount === 1 ? "" : "s"}
-          {filters.cat !== "all" && <> in {catLabel(filters.cat)}</>}
+          {filters.cat !== "all" && filters.cat !== "saved" && <> in {catLabel(filters.cat)}</>}
+          {filters.cat === "saved" && <> saved on this device</>}
           {filters.withLinks && <> with download links</>}
           {filters.source !== "all" && <> from {SOURCE_DEFS.find((d) => d.key === filters.source)?.label ?? filters.source}</>}
         </p>

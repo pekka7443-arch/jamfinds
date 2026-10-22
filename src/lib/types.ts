@@ -149,6 +149,9 @@ export const CATEGORIES: { key: string; label: string }[] = [
   { key: "info", label: "Info" },
   { key: "other", label: "Other" },
   { key: "no-link", label: "No download" },
+  // Client-side pseudo-category: filters the loaded set by the device's
+  // saved (starred) mods. The API maps cat=saved to the same query as "all".
+  { key: "saved", label: "Saved" },
 ];
 
 /**
@@ -167,4 +170,5 @@ export const CATEGORY_STYLES: Record<string, string> = {
   info: "badge-tint cat-info",
   other: "badge-tint cat-other",
   "no-link": "badge-tint cat-nolink",
+  saved: "badge-tint cat-saved",
 };

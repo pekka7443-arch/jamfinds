@@ -317,6 +317,10 @@ export async function fetchBeamfindsTotal(): Promise<number | null> {
   }
 }
 
+/** Hard cap on pages swept per category — an API misbehaving totalPages
+ * must never turn into a runaway request loop. */
+const MAX_SWEEP_PAGES = 60;
+
 /**
  * Full catalog sweep: every category (plus an unfiltered pass as a safety
  * net for future/new categories), all pages, deduplicated by id. Used for
@@ -328,7 +332,7 @@ export async function fetchBeamfindsFull(): Promise<NormalizedEntry[]> {
   let lastErr: unknown = null;
   for (const cat of [null, ...BF_CATEGORIES] as (string | null)[]) {
     try {
-      for (let p = 1; ; p++) {
+      for (let p = 1; p <= MAX_SWEEP_PAGES; p++) {
         const res = await bfModsList(cat, p, 50);
         for (const m of res.mods ?? []) {
           const e = bfEntry(m);
