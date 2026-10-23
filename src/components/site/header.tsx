@@ -3,6 +3,7 @@
 import { RefreshCw, Radio, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { SyncInfo } from "@/lib/types";
+import { NotifyBell } from "./notify-bell";
 import { RelativeTime } from "./relative-time";
 
 interface HeaderProps {
@@ -61,6 +62,9 @@ export function Header({ sync, refreshing, onRefresh }: HeaderProps) {
           </span>
 
           <div className="ml-auto flex shrink-0 items-center gap-2">
+            {/* Notify-me bell (Web Push) */}
+            <NotifyBell />
+
             {/* Refresh */}
             <Button
               size="sm"

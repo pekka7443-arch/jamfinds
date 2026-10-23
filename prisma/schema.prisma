@@ -18,8 +18,9 @@ model Mod {
   thumbnail   String?
   images      String   @default("[]") // JSON string array of image urls
   links       String   @default("[]") // JSON string array of {url, host, label, decoded}
-  category    String   @default("other") // vehicle | map | skin | parts | request | info | other
+  category    String   @default("other") // vehicle | map | skin | parts | request | info | other | no-link
   hasLinks    Boolean  @default(false)
+  contentHash String? // slug of cleaned rawTitle — dedupes the same mod across sources
   publishedAt DateTime // when posted on reddit
   firstSeenAt DateTime @default(now()) // when our site first saw it
   updatedAt   DateTime @updatedAt
@@ -28,6 +29,14 @@ model Mod {
   @@index([firstSeenAt])
   @@index([source])
   @@index([category])
+  @@index([contentHash])
+}
+
+model PushSub {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique // web push subscription endpoint (push service URL)
+  keys      String // JSON string {p256dh, auth} for payload encryption
+  createdAt DateTime @default(now())
 }
 
 model SyncState {

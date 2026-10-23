@@ -25,6 +25,7 @@ import {
   type NormalizedEntry,
 } from "@/lib/scrapers"
 import { cleanTitle, extractLinks, hasDownloadLink, inferCategory } from "@/lib/links"
+import { contentSlug } from "@/lib/slug"
 import { SOURCE_DEFS, SOURCES } from "@/lib/sources"
 
 export { SOURCES }
@@ -91,6 +92,7 @@ type NormalizedRow = NormalizedEntry & {
   category: string
   hasLinks: boolean
   rawTitle: string
+  contentHash: string | null
 }
 
 /** Normalize a raw entry: clean title, extract links, infer category. */
@@ -127,6 +129,9 @@ function normalize(entry: NormalizedEntry): NormalizedRow {
   }
   const thumbnail =
     entry.thumbnail ?? (entry.images.length === 0 ? gdriveThumbFromLinks(links) : null)
+  // Cross-source duplicate key: slug of the cleaned RAW title (see slug.ts).
+  // Empty slugs (punctuation-only junk titles) store null — never dedupe on "".
+  const contentHash = contentSlug(rawTitle) || null
   return {
     ...entry,
     title,
@@ -136,6 +141,7 @@ function normalize(entry: NormalizedEntry): NormalizedRow {
     thumbnail,
     hasLinks: links.length > 0,
     category,
+    contentHash,
   }
 }
 
@@ -167,6 +173,7 @@ async function upsertEntry(entry: NormalizedEntry): Promise<"insert" | "update">
     links: JSON.stringify(n.links),
     category: n.category,
     hasLinks: n.hasLinks,
+    contentHash: n.contentHash,
   }
 
   const existing = await db.mod.findUnique({
@@ -219,7 +226,7 @@ export async function upsertEntries(
 }
 
 /** Collect fresh entries from every source, with per-source error capture. */
-async function fetchAllSources(): Promise<{ fetched: number; lastError?: string }> {
+async function fetchAllSources(force: boolean): Promise<{ fetched: number; lastError?: string }> {
   let fetched = 0
   let lastError: string | undefined
 
@@ -238,6 +245,7 @@ async function fetchAllSources(): Promise<{ fetched: number; lastError?: string 
   for (const def of ordered) {
     if (
       def.kind === "web" &&
+      !force && // forced syncs (manual Refresh) bypass the politeness window
       state.lastWebFetch?.[def.key] &&
       Date.now() - state.lastWebFetch[def.key] < WEB_SOURCE_MIN_INTERVAL_MS
     ) {
@@ -287,8 +295,10 @@ async function fetchAllSources(): Promise<{ fetched: number; lastError?: string 
       }
       for (const entry of entries) {
         const kind = await upsertEntry(entry)
-        if (kind === "insert") insertedCount++
-        else updatedCount++
+        if (kind === "insert") {
+          insertedCount++
+          insertedMods.push({ id: entry.id, title: entry.title, source: entry.source, publishedAt: entry.publishedAt })
+        } else updatedCount++
       }
     } catch (err) {
       lastError = `${def.label}: ${(err as Error).message}`
@@ -304,6 +314,115 @@ async function fetchAllSources(): Promise<{ fetched: number; lastError?: string 
 // simple counters shared with runSync (single-flight lock makes this safe)
 let insertedCount = 0
 let updatedCount = 0
+/** Minimal shape pushed to subscribers when new mods land. */
+interface InsertedMod {
+  id: string
+  title: string
+  source: string
+  publishedAt: Date
+}
+let insertedMods: InsertedMod[] = []
+
+/* ------------------------------------------------------------------ */
+/* Web Push fan-out (Task 15)                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Push "new mods just dropped" to every stored subscription.
+ * Fire-and-forget: never blocks or fails the sync. No-op unless VAPID
+ * credentials are configured (VAPID_PUBLIC / VAPID_PRIVATE, optional
+ * VAPID_SUBJECT). Subs the push service reports as gone (404/410) are
+ * pruned on the spot.
+ */
+async function fanOutPush(newMods: InsertedMod[]): Promise<void> {
+  const publicKey = process.env.VAPID_PUBLIC
+  const privateKey = process.env.VAPID_PRIVATE
+  if (!publicKey || !privateKey || newMods.length === 0) return
+
+  const subs = await db.pushSub.findMany()
+  if (subs.length === 0) return
+
+  const webpush = (await import("web-push")).default
+  try {
+    webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:admin@jamfinds.space-z.ai", publicKey, privateKey)
+  } catch {
+    return // malformed keys — skip silently, sync must never break on push
+  }
+
+  const latest = [...newMods].sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime())[0]
+  const payload = JSON.stringify({
+    title: `🔥 ${newMods.length} new mod${newMods.length === 1 ? "" : "s"} just dropped`,
+    body: latest ? `Latest: ${latest.title}` : undefined,
+    url: latest ? `/mod/${latest.id}` : "/",
+  })
+
+  await Promise.allSettled(
+    subs.map(async (sub) => {
+      let keys: { p256dh?: string; auth?: string } = {}
+      try {
+        keys = JSON.parse(sub.keys)
+      } catch {
+        await db.pushSub.delete({ where: { id: sub.id } }).catch(() => {})
+        return
+      }
+      // web-push client-side validates key format and throws BEFORE any
+      // network call (no statusCode) — prune format-invalid rows instead of
+      // retrying them forever. Real browser subscriptions always pass this.
+      const validKeys =
+        keys.p256dh !== undefined &&
+        keys.auth !== undefined &&
+        (() => {
+          try {
+            return Buffer.from(keys.p256dh!, "base64url").length === 65 && Buffer.from(keys.auth!, "base64url").length >= 16
+          } catch {
+            return false
+          }
+        })()
+      if (!validKeys) {
+        await db.pushSub.delete({ where: { id: sub.id } }).catch(() => {})
+        return
+      }
+      try {
+        await webpush.sendNotification({ endpoint: sub.endpoint, keys: keys as { p256dh: string; auth: string } }, payload)
+      } catch (err) {
+        const statusCode = (err as { statusCode?: number }).statusCode
+        if (statusCode === 404 || statusCode === 410) {
+          // Subscription expired/removed on the push service — prune it.
+          await db.pushSub.delete({ where: { id: sub.id } }).catch(() => {})
+        }
+        // other errors (timeouts, 5xx from push service): keep the sub
+      }
+    }),
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/* contentHash backfill (Task 15)                                      */
+/* ------------------------------------------------------------------ */
+
+let backfillStarted = false
+
+/**
+ * Rows imported before contentHash existed get theirs computed on the next
+ * sync — one background pass per process, batched, so production heals
+ * itself right after the first deploy without any manual script.
+ */
+async function backfillContentHashes(): Promise<void> {
+  const BATCH = 200
+  for (;;) {
+    const rows = await db.mod.findMany({
+      where: { contentHash: null },
+      select: { id: true, rawTitle: true },
+      take: BATCH,
+    })
+    if (rows.length === 0) return
+    for (const r of rows) {
+      const hash = contentSlug(r.rawTitle) || null
+      await db.mod.update({ where: { id: r.id }, data: { contentHash: hash } }).catch(() => {})
+    }
+    if (rows.length < BATCH) return
+  }
+}
 
 async function runSync(force: boolean): Promise<SyncResult> {
   if (state.running) {
@@ -312,6 +431,7 @@ async function runSync(force: boolean): Promise<SyncResult> {
   state.running = true
   insertedCount = 0
   updatedCount = 0
+  insertedMods = []
   const startedAt = Date.now()
 
   try {
@@ -323,7 +443,7 @@ async function runSync(force: boolean): Promise<SyncResult> {
       }
     }
 
-    const { fetched, lastError } = await fetchAllSources()
+    const { fetched, lastError } = await fetchAllSources(force)
     const durationMs = Date.now() - startedAt
     const anyFetchError = Boolean(lastError)
     const partialSuccess = fetched > 0
@@ -359,6 +479,18 @@ async function runSync(force: boolean): Promise<SyncResult> {
 
     // success (or partial)
     state.consecutiveFailures = 0
+    // Self-healing backfill: older rows gain their contentHash in the
+    // background (one pass per process, no-ops when everything is hashed).
+    if (!backfillStarted) {
+      backfillStarted = true
+      void backfillContentHashes().catch(() => {})
+    }
+    // Web Push fan-out when this sync actually found new mods — after the
+    // upserts, fire-and-forget so the sync result never waits on push.
+    if (insertedCount > 0 && insertedMods.length > 0) {
+      const mods = insertedMods
+      void fanOutPush(mods).catch(() => {})
+    }
     await db.syncState.upsert({
       where: { id: "global" },
       create: {

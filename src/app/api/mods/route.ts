@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { ensureSync, startSyncLoop, SOURCES } from "@/lib/sync"
+import { computeDuplicateIds, attachSources } from "@/lib/mod-queries"
 
 export const dynamic = "force-dynamic"
 
@@ -35,6 +36,13 @@ export async function GET(req: NextRequest) {
   if (source && source !== "all") where.source = source
   if (withLinks) where.hasLinks = true
 
+  // ContentHash dedupe (Task 15): when the same mod lands on several
+  // sources, only its newest publishedAt row inside THIS filtered set is
+  // returned — evaluated over the visible rows only, so Requests/No-download
+  // isolation and category filters behave exactly as before.
+  const dupIds = await computeDuplicateIds(where)
+  if (dupIds.length > 0) where.id = { notIn: dupIds }
+
   const orderBy =
     sort === "old" ? { publishedAt: "asc" as const } : sort === "az" ? { title: "asc" as const } : { publishedAt: "desc" as const }
 
@@ -55,6 +63,10 @@ export async function GET(req: NextRequest) {
 
   const hasMore = mods.length > limit
   const items = mods.slice(0, limit)
+
+  // Multi-source rows: attach every SourceDef whose catalog carries the
+  // same contentHash (single-source rows come back untouched).
+  await attachSources(items)
 
   const stats = {
     total: totalCount,

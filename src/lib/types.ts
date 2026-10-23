@@ -1,5 +1,9 @@
 /** Shared client-side types mirroring the API + DB rows. */
 
+import type { SourceDef } from "@/lib/sources";
+
+export type { SourceDef };
+
 export interface ModLink {
   url: string;
   host: string;
@@ -20,6 +24,8 @@ export interface ModItem {
   links: string; // JSON array string
   category: string;
   hasLinks: boolean;
+  /** When the same mod exists on several sources: every matching SourceDef (newest row wins the listing slot). */
+  sources?: SourceDef[];
   publishedAt: string; // ISO
   firstSeenAt: string; // ISO
 }

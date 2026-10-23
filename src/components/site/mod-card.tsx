@@ -196,19 +196,44 @@ export function ModCard({
       {/* body */}
       <div className="flex flex-1 flex-col gap-1.5 p-3.5">
         <h3 className="tt-card-title line-clamp-2 min-h-[2.45rem] text-foreground transition-colors duration-150 group-hover:text-primary">
-          {mod.title}
+          {/* Canonical permalink (Task 15): the title itself links to /mod/[id] so
+              every card is shareable/bookmarkable — plain click still opens the
+              dialog, ctrl/middle-click opens the page in a new tab. */}
+          <a
+            href={`/mod/${mod.id}`}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            className="outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {mod.title}
+          </a>
         </h3>
         {mod.text && <p className="line-clamp-2 text-xs leading-[1.5] text-muted-foreground">{mod.text}</p>}
 
         {/* meta row pinned to the bottom for even cards */}
         <div className="mt-auto flex items-center gap-1.5 pt-1.5 text-xs text-muted-foreground">
-          <span
-            className={`inline-flex shrink-0 items-center gap-1 rounded border border-border bg-secondary/60 px-1.5 py-0.5 text-[10px] font-medium leading-[1.6]`}
-            title={`Source: ${src?.label ?? mod.source}`}
-          >
-            <span className={`h-1.5 w-1.5 rounded-full ${src?.dot ?? "bg-zinc-400"}`} aria-hidden="true" />
-            {src?.label ?? mod.source}
-          </span>
+          {mod.sources && mod.sources.length > 1 ? (
+            /* multi-source: stacked dots + "on N sources" (Task 15) */
+            <span
+              className="inline-flex shrink-0 items-center gap-1.5 rounded border border-border bg-secondary/60 px-1.5 py-0.5 text-[10px] font-medium leading-[1.6]"
+              title={`Available on: ${mod.sources.map((s) => s.label).join(", ")}`}
+            >
+              <span className="flex items-center -space-x-1" aria-hidden="true">
+                {mod.sources.map((s) => (
+                  <span key={s.key} className={`h-1.5 w-1.5 rounded-full ring-1 ring-background ${s.dot}`} />
+                ))}
+              </span>
+              on {mod.sources.length} sources
+            </span>
+          ) : (
+            <span
+              className={`inline-flex shrink-0 items-center gap-1 rounded border border-border bg-secondary/60 px-1.5 py-0.5 text-[10px] font-medium leading-[1.6]`}
+              title={`Source: ${src?.label ?? mod.source}`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${src?.dot ?? "bg-zinc-400"}`} aria-hidden="true" />
+              {src?.label ?? mod.source}
+            </span>
+          )}
           <span className="inline-flex min-w-0 items-center gap-1 truncate">
             <User2 className="h-3 w-3 shrink-0" aria-hidden="true" />
             <span className="truncate">{mod.author}</span>
