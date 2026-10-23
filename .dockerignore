@@ -1,0 +1,11 @@
+node_modules
+.next
+.git
+*.log
+.env*
+db/custom.db
+download
+tool-results
+worklog.md
+examples
+tests
