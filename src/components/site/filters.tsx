@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { Search, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -33,7 +34,8 @@ const chipBase =
   "inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border px-4 text-[13px] font-medium leading-none transition-all duration-150 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-h-9 sm:px-3.5 sm:text-xs";
 
 export function Filters({ query, onQueryChange, filters, onChange, data, resultCount, savedCount }: FiltersProps) {
-  const catLabel = (key: string) => CATEGORIES.find((c) => c.key === key)?.label ?? key;
+  const t = useTranslations("filters");
+  const tc = useTranslations("categories");
   const isFiltered = filters.cat !== "all" || filters.withLinks || filters.source !== "all" || query.trim() !== "";
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -41,8 +43,8 @@ export function Filters({ query, onQueryChange, filters, onChange, data, resultC
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey) return;
-      const t = e.target as HTMLElement | null;
-      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) {
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable)) {
         return;
       }
       e.preventDefault();
@@ -66,9 +68,9 @@ export function Filters({ query, onQueryChange, filters, onChange, data, resultC
             ref={searchRef}
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
-            placeholder="Search mods, cars, maps, authors..."
+            placeholder={t("searchPlaceholder")}
             className="h-11 border-input bg-secondary/50 pl-9 pr-16 text-[15px] transition-colors focus-visible:bg-secondary/70 sm:h-10 sm:text-sm"
-            aria-label="Search mods"
+            aria-label={t("searchAria")}
             aria-keyshortcuts="/"
             enterKeyHint="search"
           />
@@ -76,7 +78,7 @@ export function Filters({ query, onQueryChange, filters, onChange, data, resultC
             <button
               onClick={() => onQueryChange("")}
               className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              aria-label="Clear search"
+              aria-label={t("clearSearch")}
             >
               <X className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
@@ -94,12 +96,12 @@ export function Filters({ query, onQueryChange, filters, onChange, data, resultC
           <Select value={filters.source} onValueChange={(v) => onChange({ ...filters, source: v })}>
             <SelectTrigger
               className="h-11 min-w-0 flex-1 text-[13px] sm:h-10 sm:flex-none sm:w-[168px] sm:text-xs"
-              aria-label="Filter by source"
+              aria-label={t("sourceAria")}
             >
-              <SelectValue placeholder="All sources" />
+              <SelectValue placeholder={t("allSources")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All sources</SelectItem>
+              <SelectItem value="all">{t("allSources")}</SelectItem>
               {(data?.stats.sources ?? []).map((s) => (
                 <SelectItem key={s.name} value={s.name}>
                   {SOURCE_DEFS.find((d) => d.key === s.name)?.label ?? s.name} ({s.count})
@@ -111,14 +113,14 @@ export function Filters({ query, onQueryChange, filters, onChange, data, resultC
           <Select value={filters.sort} onValueChange={(v) => onChange({ ...filters, sort: v })}>
             <SelectTrigger
               className="h-11 min-w-0 flex-1 text-[13px] sm:h-10 sm:flex-none sm:w-[136px] sm:text-xs"
-              aria-label="Sort order"
+              aria-label={t("sortAria")}
             >
-              <SelectValue placeholder="Sort" />
+              <SelectValue placeholder={t("sortAria")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="new">Newest first</SelectItem>
-              <SelectItem value="old">Oldest first</SelectItem>
-              <SelectItem value="az">A → Z</SelectItem>
+              <SelectItem value="new">{t("sortNew")}</SelectItem>
+              <SelectItem value="old">{t("sortOld")}</SelectItem>
+              <SelectItem value="az">{t("sortAz")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -129,7 +131,7 @@ export function Filters({ query, onQueryChange, filters, onChange, data, resultC
         <div
           className="no-scrollbar -mx-3 flex items-center gap-1.5 overflow-x-auto px-3 pb-0.5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
           role="group"
-          aria-label="Filter by category"
+          aria-label={t("categoriesAria")}
         >
           {CATEGORIES.map((c) => {
             const active = filters.cat === c.key;
@@ -145,7 +147,7 @@ export function Filters({ query, onQueryChange, filters, onChange, data, resultC
                 }`}
                 aria-pressed={active}
               >
-                {c.label}
+                {tc(c.key as "all")}
                 {count}
               </button>
             );
@@ -157,10 +159,10 @@ export function Filters({ query, onQueryChange, filters, onChange, data, resultC
             id="with-links"
             checked={filters.withLinks}
             onCheckedChange={(v) => onChange({ ...filters, withLinks: v })}
-            aria-label="Only show mods with download links"
+            aria-label={t("withLinksAria")}
           />
           <Label htmlFor="with-links" className="cursor-pointer text-[13px] text-muted-foreground sm:text-xs">
-            Ready to download
+            {t("withLinks")}
           </Label>
         </div>
       </div>
@@ -168,12 +170,13 @@ export function Filters({ query, onQueryChange, filters, onChange, data, resultC
       {/* Results meta */}
       <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border/60 pt-3" aria-live="polite">
         <p className="text-xs text-muted-foreground">
-          <span className="font-semibold text-foreground">{resultCount}</span>{" "}
-          result{resultCount === 1 ? "" : "s"}
-          {filters.cat !== "all" && filters.cat !== "saved" && <> in {catLabel(filters.cat)}</>}
-          {filters.cat === "saved" && <> saved on this device</>}
-          {filters.withLinks && <> with download links</>}
-          {filters.source !== "all" && <> from {SOURCE_DEFS.find((d) => d.key === filters.source)?.label ?? filters.source}</>}
+          <span className="font-semibold text-foreground">{t("results", { count: resultCount })}</span>
+          {filters.cat !== "all" && filters.cat !== "saved" && <> {t("inCategory", { category: tc(filters.cat as "all") })}</>}
+          {filters.cat === "saved" && <> {t("savedOnDevice")}</>}
+          {filters.withLinks && <> {t("withDownloadLinks")}</>}
+          {filters.source !== "all" && (
+            <> {t("fromSource", { source: SOURCE_DEFS.find((d) => d.key === filters.source)?.label ?? filters.source })}</>
+          )}
         </p>
         {isFiltered && (
           <button
@@ -183,7 +186,7 @@ export function Filters({ query, onQueryChange, filters, onChange, data, resultC
             }}
             className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/50 px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-foreground/25 hover:text-foreground"
           >
-            <X className="h-3 w-3" aria-hidden="true" /> Clear filters
+            <X className="h-3 w-3" aria-hidden="true" /> {t("clearFilters")}
           </button>
         )}
       </div>

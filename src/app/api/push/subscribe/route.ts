@@ -40,9 +40,14 @@ function parseSubscription(body: SubscribeBody): { endpoint: string; keysJson: s
   return { endpoint, keysJson: JSON.stringify({ p256dh: keys.p256dh, auth: keys.auth }) }
 }
 
+/** VAPID public key: Task 16 primary name, legacy Task 15 name as fallback. */
+export function vapidPublicKey(): string | null {
+  return process.env.VAPID_PUBLIC_KEY ?? process.env.VAPID_PUBLIC ?? null
+}
+
 export async function GET() {
   return NextResponse.json(
-    { publicKey: process.env.VAPID_PUBLIC ?? null },
+    { publicKey: vapidPublicKey() },
     { headers: { "Cache-Control": "no-store" } },
   )
 }
@@ -64,12 +69,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid PushSubscription payload" }, { status: 400 })
   }
 
+  const existing = await db.pushSub.findUnique({ where: { endpoint: parsed.endpoint }, select: { id: true } })
   await db.pushSub.upsert({
     where: { endpoint: parsed.endpoint },
     create: { endpoint: parsed.endpoint, keys: parsed.keysJson },
     update: { keys: parsed.keysJson }, // keys rotate on re-subscribe
   })
-  return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } })
+  // 201 Created for a fresh subscription, 200 when keys rotate on re-subscribe.
+  return NextResponse.json(
+    { ok: true },
+    { status: existing ? 200 : 201, headers: { "Cache-Control": "no-store" } },
+  )
 }
 
 export async function DELETE(req: NextRequest) {

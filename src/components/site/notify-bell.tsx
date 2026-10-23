@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Bell, BellRing } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 
@@ -49,6 +50,7 @@ function storeEndpoint(endpoint: string | null) {
 }
 
 export function NotifyBell() {
+  const t = useTranslations("notify");
   const [state, setState] = useState<BellState>("default");
   const [busy, setBusy] = useState(false);
 
@@ -90,8 +92,8 @@ export function NotifyBell() {
       if (permission === "denied") {
         setState("denied");
         toast({
-          title: "Notifications blocked",
-          description: "Your browser has blocked notifications for this site — re-enable them in site settings to get mod alerts.",
+          title: t("blocked"),
+          description: t("blockedBody"),
           variant: "destructive",
         });
         return;
@@ -99,7 +101,7 @@ export function NotifyBell() {
       const configRes = await fetch("/api/push/subscribe");
       const config = (await configRes.json()) as { publicKey: string | null };
       if (!config.publicKey) {
-        toast({ title: "Push is not configured yet", description: "The server is missing VAPID keys — check back soon." });
+        toast({ title: t("notConfigured"), description: t("notConfiguredBody") });
         return;
       }
       const reg = await navigator.serviceWorker.register("/sw.js");
@@ -117,19 +119,19 @@ export function NotifyBell() {
       storeEndpoint(sub.endpoint);
       setState("subscribed");
       toast({
-        title: "🔔 You'll be notified",
-        description: "We'll ping you the moment new BeamNG mods drop — no refresh needed.",
+        title: t("subscribed"),
+        description: t("subscribedBody"),
       });
     } catch {
       toast({
-        title: "Couldn't enable notifications",
-        description: "Your browser or network blocked the push subscription. Try again later.",
+        title: t("failed"),
+        description: t("failedBody"),
         variant: "destructive",
       });
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [t]);
 
   const unsubscribe = useCallback(async () => {
     setBusy(true);
@@ -147,7 +149,7 @@ export function NotifyBell() {
       }
       storeEndpoint(null);
       setState("default");
-      toast({ title: "Notifications off", description: "You won't get mod alerts on this device anymore." });
+      toast({ title: t("off"), description: t("offBody") });
     } catch {
       // even on failure, drop the local state so the UI stays honest
       storeEndpoint(null);
@@ -155,24 +157,24 @@ export function NotifyBell() {
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [t]);
 
   const onClick = useCallback(() => {
     if (busy) return;
     if (state === "subscribed") void unsubscribe();
     else if (state === "denied") {
       toast({
-        title: "Notifications are blocked",
-        description: "Click the lock icon in your address bar and allow notifications to subscribe.",
+        title: t("blockedClick"),
+        description: t("blockedClickBody"),
         variant: "destructive",
       });
     } else if (state === "unsupported") {
-      toast({ title: "Not supported here", description: "This browser can't receive web push notifications." });
+      toast({ title: t("notSupported"), description: t("notSupportedBody") });
     } else void subscribe();
-  }, [busy, state, subscribe, unsubscribe]);
+  }, [busy, state, subscribe, unsubscribe, t]);
 
   const subscribed = state === "subscribed";
-  const label = subscribed ? "Notifications on — click to turn off" : "Notify me when new mods drop";
+  const label = subscribed ? t("tooltipOn") : t("tooltipOff");
 
   return (
     <Button
@@ -189,7 +191,7 @@ export function NotifyBell() {
       ) : (
         <Bell className="h-3.5 w-3.5" aria-hidden="true" />
       )}
-      <span className="hidden sm:inline">{subscribed ? "On" : "Notify me"}</span>
+      <span className="hidden sm:inline">{subscribed ? t("on") : t("enable")}</span>
       {subscribed && <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />}
     </Button>
   );

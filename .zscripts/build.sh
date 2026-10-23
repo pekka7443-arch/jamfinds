@@ -122,6 +122,22 @@ if [ -d ".next/standalone" ]; then
     cp -r .next/standalone "$BUILD_DIR/next-service-dist/"
 fi
 
+# 从产物 .env 中剥离开发期 DATABASE_URL（Task 16）：
+# next build 会把项目 .env 一并拷贝进 standalone，其中携带指向开发库路径的
+# DATABASE_URL。部署容器里 start.sh 会以进程环境注入生产值（进程环境优先级
+# 高于 .env，Bun runtime 两边都会读），产物里保留它只会泄漏本地路径。
+# 其余变量（如 VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT）原样保留。
+if [ -f "$BUILD_DIR/next-service-dist/.env" ]; then
+    if grep -q '^DATABASE_URL=' "$BUILD_DIR/next-service-dist/.env"; then
+        echo "  - 剥离 next-service-dist/.env 中的 DATABASE_URL（生产值由 start.sh 运行时注入）"
+        grep -v '^DATABASE_URL=' "$BUILD_DIR/next-service-dist/.env" > "$BUILD_DIR/next-service-dist/.env.tmp" \
+            && mv "$BUILD_DIR/next-service-dist/.env.tmp" "$BUILD_DIR/next-service-dist/.env"
+        rm -f "$BUILD_DIR/next-service-dist/.env.tmp"
+    else
+        echo "ℹ️  next-service-dist/.env 不含 DATABASE_URL，无需剥离"
+    fi
+fi
+
 # 复制 Next.js 静态文件
 if [ -d ".next/static" ]; then
     echo "  - 复制 .next/static"

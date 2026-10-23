@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslations } from "next-intl";
 import {
   KeyRound,
   User2,
@@ -29,19 +30,25 @@ import { CardDownloadButton } from "./download-button";
 import { useFavorites } from "@/hooks/use-favorites";
 import { RelativeTime } from "./relative-time";
 
-const CATEGORY_META: Record<string, { label: string; icon: React.ReactNode }> = {
-  vehicle: { label: "Vehicle", icon: <Car className="h-3 w-3" /> },
-  map: { label: "Map", icon: <MapIcon className="h-3 w-3" /> },
-  skin: { label: "Skin", icon: <Package className="h-3 w-3" /> },
-  parts: { label: "Parts", icon: <Wrench className="h-3 w-3" /> },
-  request: { label: "Request", icon: <HelpCircle className="h-3 w-3" /> },
-  info: { label: "Info", icon: <Megaphone className="h-3 w-3" /> },
-  other: { label: "Other", icon: <Info className="h-3 w-3" /> },
-  "no-link": { label: "No download", icon: <Unlink className="h-3 w-3" /> },
+const CATEGORY_META: Record<string, { icon: React.ReactNode }> = {
+  vehicle: { icon: <Car className="h-3 w-3" /> },
+  map: { icon: <MapIcon className="h-3 w-3" /> },
+  skin: { icon: <Package className="h-3 w-3" /> },
+  parts: { icon: <Wrench className="h-3 w-3" /> },
+  request: { icon: <HelpCircle className="h-3 w-3" /> },
+  info: { icon: <Megaphone className="h-3 w-3" /> },
+  other: { icon: <Info className="h-3 w-3" /> },
+  "no-link": { icon: <Unlink className="h-3 w-3" /> },
 };
 
+/** Known category badge keys (unknown categories fall back to "other"). */
+export function categoryBadgeKey(cat: string): string {
+  return CATEGORY_META[cat] ? cat : "other";
+}
+
 export function categoryMeta(cat: string) {
-  return CATEGORY_META[cat] ?? CATEGORY_META.other;
+  const key = categoryBadgeKey(cat);
+  return { key, icon: CATEGORY_META[key].icon };
 }
 
 /* Lucide components for the generated covers on cards without images. */
@@ -74,6 +81,8 @@ export function ModCard({
   const [imgFailed, setImgFailed] = useState(false);
   const { toggle: toggleSaved, isSaved } = useFavorites();
   const saved = isSaved(mod.id);
+  const t = useTranslations("card");
+  const tb = useTranslations("badges");
 
   const thumb = mod.thumbnail ?? images[0] ?? null;
   const cat = categoryMeta(mod.category);
@@ -99,7 +108,7 @@ export function ModCard({
           onOpen(mod);
         }
       }}
-      aria-label={`Open mod: ${mod.title}`}
+      aria-label={t("openAria", { title: mod.title })}
     >
       {/* thumbnail */}
       <div className="relative h-40 w-full shrink-0 overflow-hidden bg-secondary/60">
@@ -138,12 +147,12 @@ export function ModCard({
             className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold leading-[1.6] backdrop-blur-sm ${catCls}`}
           >
             {cat.icon}
-            {cat.label}
+            {tb(cat.key as "vehicle")}
           </span>
           <span className="flex shrink-0 items-center gap-1">
             {isNew && (
               <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-[1.6] text-primary-foreground shadow-sm">
-                NEW
+                {t("new")}
               </span>
             )}
             <button
@@ -154,8 +163,8 @@ export function ModCard({
               }}
               onKeyDown={(e) => e.stopPropagation()}
               aria-pressed={saved}
-              aria-label={saved ? `Remove ${mod.title} from saved` : `Save ${mod.title}`}
-              title={saved ? "Saved — tap to remove" : "Save this mod"}
+              aria-label={saved ? t("savedAria", { title: mod.title }) : t("saveAria", { title: mod.title })}
+              title={saved ? t("savedTitle") : t("saveTitle")}
               className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-black/45 text-zinc-300 backdrop-blur-sm transition-colors duration-150 hover:bg-black/65 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <Star className={`h-3.5 w-3.5 ${saved ? "fill-primary text-primary" : ""}`} aria-hidden="true" />
@@ -216,19 +225,19 @@ export function ModCard({
             /* multi-source: stacked dots + "on N sources" (Task 15) */
             <span
               className="inline-flex shrink-0 items-center gap-1.5 rounded border border-border bg-secondary/60 px-1.5 py-0.5 text-[10px] font-medium leading-[1.6]"
-              title={`Available on: ${mod.sources.map((s) => s.label).join(", ")}`}
+              title={t("availableOn", { sources: mod.sources.map((s) => s.label).join(", ") })}
             >
               <span className="flex items-center -space-x-1" aria-hidden="true">
                 {mod.sources.map((s) => (
                   <span key={s.key} className={`h-1.5 w-1.5 rounded-full ring-1 ring-background ${s.dot}`} />
                 ))}
               </span>
-              on {mod.sources.length} sources
+              {t("onSources", { count: mod.sources.length })}
             </span>
           ) : (
             <span
               className={`inline-flex shrink-0 items-center gap-1 rounded border border-border bg-secondary/60 px-1.5 py-0.5 text-[10px] font-medium leading-[1.6]`}
-              title={`Source: ${src?.label ?? mod.source}`}
+              title={t("source", { source: src?.label ?? mod.source })}
             >
               <span className={`h-1.5 w-1.5 rounded-full ${src?.dot ?? "bg-zinc-400"}`} aria-hidden="true" />
               {src?.label ?? mod.source}

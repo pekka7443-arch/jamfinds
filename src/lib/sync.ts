@@ -15,6 +15,7 @@
 
 import { db } from "@/lib/db"
 import { fetchSubredditFeed, htmlToText } from "@/lib/reddit"
+import webpush from "web-push"
 import {
   fetchBeamfinds,
   fetchBeamfindsFull,
@@ -327,32 +328,115 @@ let insertedMods: InsertedMod[] = []
 /* Web Push fan-out (Task 15)                                          */
 /* ------------------------------------------------------------------ */
 
+/* Localized push texts (Task 16). The fan-out payload carries every
+ * supported language; public/sw.js picks the best match from
+ * navigator.languages, so one broadcast serves all readers. */
+const PUSH_TITLE_ONE: Record<string, string> = {
+  en: "🔥 1 new mod just dropped",
+  fi: "🔥 Uusi modi juuri julkaistu",
+  de: "🔥 1 neuer Mod frisch gelandet",
+  fr: "🔥 1 nouveau mod vient de débarquer",
+  es: "🔥 1 mod nuevo acaba de aterrizar",
+  ru: "🔥 Новый мод уже на JamFinds",
+}
+const PUSH_TITLE_MANY: Record<string, string> = {
+  en: "new mods just dropped",
+  fi: "uutta modia juuri julkaistu",
+  de: "neue Mods frisch gelandet",
+  fr: "nouveaux mods viennent de débarquer",
+  es: "mods nuevos acaban de aterrizar",
+  ru: "новых модов уже на JamFinds",
+}
+const PUSH_BODY_LATEST: Record<string, string> = {
+  en: "Latest: {title}",
+  fi: "Uusin: {title}",
+  de: "Neuester: {title}",
+  fr: "Le plus récent : {title}",
+  es: "El más reciente: {title}",
+  ru: "Последний: {title}",
+}
+const PUSH_BODY_GENERIC: Record<string, string> = {
+  en: "Fresh finds are live on JamFinds",
+  fi: "Tuoreimmat löydöt ovat nyt JamFindsissa",
+  de: "Frische Funde sind jetzt auf JamFinds",
+  fr: "Les dernières trouvailles sont en ligne sur JamFinds",
+  es: "Los hallazgos más recientes ya están en JamFinds",
+  ru: "Свежие находки уже на JamFinds",
+}
+
+/** Russian-style one/few/many partition for the push title. */
+function ruPlural(n: number): "one" | "few" | "many" {
+  const mod10 = n % 10
+  const mod100 = n % 100
+  if (mod10 === 1 && mod100 !== 11) return "one"
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "few"
+  return "many"
+}
+
+/**
+ * Build the localized {title, body} maps for a fan-out burst of `count`
+ * mods, the newest of which is `latestTitle`.
+ */
+function localizedPushTexts(count: number, latestTitle: string | null): { title: Record<string, string>; body: Record<string, string> } {
+  const title: Record<string, string> = {}
+  const body: Record<string, string> = {}
+  const locales = ["en", "fi", "de", "fr", "es", "ru"]
+  for (const l of locales) {
+    if (l === "ru") {
+      const p = ruPlural(count)
+      title[l] =
+        p === "one"
+          ? PUSH_TITLE_ONE[l]
+          : p === "few"
+            ? `${count} ${PUSH_TITLE_MANY[l].replace("новых модов", "новых мода")}`
+            : `${count} ${PUSH_TITLE_MANY[l]}`
+    } else {
+      title[l] = count === 1 ? PUSH_TITLE_ONE[l] : `${count} ${PUSH_TITLE_MANY[l]}`
+    }
+    body[l] = latestTitle ? PUSH_BODY_LATEST[l].replace("{title}", latestTitle) : PUSH_BODY_GENERIC[l]
+  }
+  return { title, body }
+}
+
+function vapidCredentials(): { publicKey: string; privateKey: string } | null {
+  const publicKey = process.env.VAPID_PUBLIC_KEY ?? process.env.VAPID_PUBLIC
+  const privateKey = process.env.VAPID_PRIVATE_KEY ?? process.env.VAPID_PRIVATE
+  return publicKey && privateKey ? { publicKey, privateKey } : null
+}
+
 /**
  * Push "new mods just dropped" to every stored subscription.
  * Fire-and-forget: never blocks or fails the sync. No-op unless VAPID
- * credentials are configured (VAPID_PUBLIC / VAPID_PRIVATE, optional
- * VAPID_SUBJECT). Subs the push service reports as gone (404/410) are
- * pruned on the spot.
+ * credentials are configured (VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY,
+ * legacy VAPID_PUBLIC / VAPID_PRIVATE accepted, optional VAPID_SUBJECT).
+ * Subs the push service reports as gone (404/410) are pruned on the spot.
  */
 async function fanOutPush(newMods: InsertedMod[]): Promise<void> {
-  const publicKey = process.env.VAPID_PUBLIC
-  const privateKey = process.env.VAPID_PRIVATE
-  if (!publicKey || !privateKey || newMods.length === 0) return
-
-  const subs = await db.pushSub.findMany()
-  if (subs.length === 0) return
-
-  const webpush = (await import("web-push")).default
-  try {
-    webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:admin@jamfinds.space-z.ai", publicKey, privateKey)
-  } catch {
-    return // malformed keys — skip silently, sync must never break on push
+  const creds = vapidCredentials()
+  if (!creds || newMods.length === 0) {
+    console.log(`[push] fan-out skipped (creds=${Boolean(creds)} mods=${newMods.length})`)
+    return
   }
 
+  const subs = await db.pushSub.findMany()
+  if (subs.length === 0) {
+    console.log("[push] fan-out skipped (no subscriptions)")
+    return
+  }
+
+  try {
+    webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:admin@jamfinds.space-z.ai", creds.publicKey, creds.privateKey)
+  } catch {
+    console.log("[push] fan-out skipped (malformed VAPID keys)")
+    return // malformed keys — skip silently, sync must never break on push
+  }
+  console.log(`[push] fanning out ${newMods.length} new mod(s) to ${subs.length} subscription(s)`)
+
   const latest = [...newMods].sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime())[0]
+  const { title, body } = localizedPushTexts(newMods.length, latest?.title ?? null)
   const payload = JSON.stringify({
-    title: `🔥 ${newMods.length} new mod${newMods.length === 1 ? "" : "s"} just dropped`,
-    body: latest ? `Latest: ${latest.title}` : undefined,
+    title,
+    body,
     url: latest ? `/mod/${latest.id}` : "/",
   })
 
@@ -384,8 +468,10 @@ async function fanOutPush(newMods: InsertedMod[]): Promise<void> {
       }
       try {
         await webpush.sendNotification({ endpoint: sub.endpoint, keys: keys as { p256dh: string; auth: string } }, payload)
+        console.log(`[push] delivered to ${sub.endpoint.slice(0, 60)}…`)
       } catch (err) {
         const statusCode = (err as { statusCode?: number }).statusCode
+        console.log(`[push] delivery to ${sub.endpoint.slice(0, 60)}… failed: ${statusCode ?? "no-status"} ${(err as Error).message?.slice(0, 120)}`)
         if (statusCode === 404 || statusCode === 410) {
           // Subscription expired/removed on the push service — prune it.
           await db.pushSub.delete({ where: { id: sub.id } }).catch(() => {})

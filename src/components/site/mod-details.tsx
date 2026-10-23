@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
+import { useTranslations } from "next-intl";
 import { KeyRound, Copy, ExternalLink, User2, ImageIcon, Check, Globe, Download, Star } from "lucide-react";
 import { hostStyle, parseLinks, parseImages, CATEGORY_STYLES, type ModItem } from "@/lib/types";
 import { sourceDef } from "@/lib/sources";
@@ -27,19 +28,20 @@ import { RelativeTime } from "./relative-time";
 
 /** Source chip — stacked dots + "on N sources" when the mod is multi-source. */
 export function ModSourceChip({ mod }: { mod: ModItem }) {
+  const t = useTranslations("card");
   const multi = mod.sources && mod.sources.length > 1;
   if (multi) {
     return (
       <span
         className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary/60 px-2 py-0.5 text-[11px] text-muted-foreground"
-        title={`Available on: ${mod.sources!.map((s) => s.label).join(", ")}`}
+        title={t("availableOn", { sources: mod.sources!.map((s) => s.label).join(", ") })}
       >
         <span className="flex items-center -space-x-1" aria-hidden="true">
           {mod.sources!.map((s) => (
             <span key={s.key} className={`h-1.5 w-1.5 rounded-full ring-1 ring-background ${s.dot}`} />
           ))}
         </span>
-        on {mod.sources!.length} sources
+        {t("onSources", { count: mod.sources!.length })}
       </span>
     );
   }
@@ -54,6 +56,7 @@ export function ModSourceChip({ mod }: { mod: ModItem }) {
 
 /** Author · posted · indexed meta line (dialog description / page meta). */
 export function ModMeta({ mod }: { mod: ModItem }) {
+  const t = useTranslations("details");
   return (
     <>
       <span className="inline-flex items-center gap-1">
@@ -61,11 +64,11 @@ export function ModMeta({ mod }: { mod: ModItem }) {
       </span>
       <span>·</span>
       <span>
-        posted <RelativeTime iso={mod.publishedAt} />
+        {t("posted")} <RelativeTime iso={mod.publishedAt} />
       </span>
       <span>·</span>
       <span>
-        indexed by JamFinds <RelativeTime iso={mod.firstSeenAt} />
+        {t("indexed")} <RelativeTime iso={mod.firstSeenAt} />
       </span>
     </>
   );
@@ -80,6 +83,9 @@ export function ModDetailsHeader({
   titleSlot?: React.ReactNode;
   metaSlot?: React.ReactNode;
 }) {
+  const t = useTranslations("card");
+  const tb = useTranslations("badges");
+  const td = useTranslations("details");
   const { toggle: toggleSaved, isSaved } = useFavorites();
   const links = useMemo(() => parseLinks(mod), [mod]);
   const cat = categoryMeta(mod.category);
@@ -92,20 +98,20 @@ export function ModDetailsHeader({
       <div className="flex flex-wrap items-center gap-2 pr-6">
         <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${catCls}`}>
           {cat.icon}
-          {cat.label}
+          {tb(cat.key as "vehicle")}
         </span>
         <ModSourceChip mod={mod} />
         {decodedCount > 0 && (
           <Badge className="border border-primary/30 bg-primary/15 text-[11px] font-bold text-primary">
-            <KeyRound className="mr-1 h-3 w-3" aria-hidden="true" /> {decodedCount} decoded
+            <KeyRound className="mr-1 h-3 w-3" aria-hidden="true" /> {td("decoded", { count: decodedCount })}
           </Badge>
         )}
         <button
           type="button"
           onClick={() => toggleSaved(mod.id)}
           aria-pressed={isSaved(mod.id)}
-          aria-label={isSaved(mod.id) ? "Remove from saved" : "Save this mod"}
-          title={isSaved(mod.id) ? "Saved — tap to remove" : "Save this mod"}
+          aria-label={isSaved(mod.id) ? td("saveAria") : t("saveTitle")}
+          title={isSaved(mod.id) ? t("savedTitle") : t("saveTitle")}
           className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-secondary/60 text-muted-foreground transition-colors duration-150 hover:border-primary/50 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Star className={`h-4 w-4 ${isSaved(mod.id) ? "fill-primary text-primary" : ""}`} aria-hidden="true" />
@@ -123,6 +129,7 @@ export function ModDetailsHeader({
 }
 
 export function ModDetailsRest({ mod }: { mod: ModItem }) {
+  const td = useTranslations("details");
   const [copied, setCopied] = useState<string | null>(null);
   const links = useMemo(() => parseLinks(mod), [mod]);
   const images = useMemo(() => parseImages(mod), [mod]);
@@ -147,9 +154,9 @@ export function ModDetailsRest({ mod }: { mod: ModItem }) {
       await navigator.clipboard.writeText(text);
       setCopied(key);
       setTimeout(() => setCopied(null), 1600);
-      toast({ title: "Copied to clipboard", description: text.length > 80 ? text.slice(0, 80) + "…" : text });
+      toast({ title: td("copyToast"), description: td("copyToastBody", { text: text.length > 80 ? text.slice(0, 80) + "…" : text }) });
     } catch {
-      toast({ title: "Copy failed", description: "Your browser blocked clipboard access — select the link text manually.", variant: "destructive" });
+      toast({ title: td("copyFailed"), description: td("copyFailedBody"), variant: "destructive" });
     }
   };
 
@@ -157,22 +164,20 @@ export function ModDetailsRest({ mod }: { mod: ModItem }) {
     <>
       {multiSource && (
         <p className="text-[11px] leading-snug text-muted-foreground">
-          Same mod also indexed from{" "}
-          <span className="font-medium text-foreground/80">
-            {mod.sources!.filter((s) => s.key !== src?.key).map((s) => s.label).join(", ")}
-          </span>{" "}
-          — this entry points to the newest post.
+          {td("alsoOn", {
+            sources: mod.sources!.filter((s) => s.key !== src?.key).map((s) => s.label).join(", "),
+          })}
         </p>
       )}
 
       {/* Images */}
       {images.length > 0 && (
-        <div className="nice-scroll flex gap-2 overflow-x-auto pb-1" role="list" aria-label="Post images">
+        <div className="nice-scroll flex gap-2 overflow-x-auto pb-1" role="list" aria-label={td("gallery")}>
           {images.map((src, i) => (
             <a key={src} href={src} target="_blank" rel="noreferrer" className="relative shrink-0" role="listitem">
               <img
                 src={src}
-                alt={`${mod.title} — image ${i + 1}`}
+                alt={td("galleryAlt", { title: mod.title, index: i + 1 })}
                 loading="lazy"
                 referrerPolicy="no-referrer"
                 className="h-44 w-auto max-w-[300px] rounded-lg border border-border object-cover"
@@ -197,18 +202,17 @@ export function ModDetailsRest({ mod }: { mod: ModItem }) {
       {/* Links */}
       <div className="space-y-2">
         <h4 className="text-sm font-semibold">
-          Download links{" "}
+          {td("downloadLinks")}{" "}
           <span className="text-xs font-normal text-muted-foreground">
-            {decodedCount > 0 ? `(${decodedCount} auto-decoded from base64)` : `(${links.length})`}
+            {decodedCount > 0 ? td("autoDecoded", { count: decodedCount }) : td("linkCount", { count: links.length })}
           </span>
           <span className="ml-1.5 hidden items-center gap-1 text-[11px] font-normal text-primary sm:inline">
-            <Download className="h-3 w-3" aria-hidden="true" /> direct from JamFinds when possible
+            <Download className="h-3 w-3" aria-hidden="true" /> {td("directHint")}
           </span>
         </h4>
         {links.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border p-3 text-sm leading-relaxed text-muted-foreground">
-            No download link found in this post — it may be a request or discussion. Check the original thread or
-            ask the author.
+            {td("noLinks")}
           </p>
         ) : (
           links.map((l) => {
@@ -222,7 +226,7 @@ export function ModDetailsRest({ mod }: { mod: ModItem }) {
                         {l.decoded && <KeyRound className="h-3 w-3" aria-hidden="true" />}
                         {l.label}
                       </span>
-                      {l.decoded && <span className="text-[10px] font-medium text-primary">base64 decoded</span>}
+                      {l.decoded && <span className="text-[10px] font-medium text-primary">{td("base64Decoded")}</span>}
                     </div>
                     <p className="mt-1 truncate font-mono text-xs text-muted-foreground" title={l.url}>
                       {l.url}
@@ -231,7 +235,7 @@ export function ModDetailsRest({ mod }: { mod: ModItem }) {
                   <div className="flex shrink-0 gap-1.5">
                     <Button size="sm" variant="outline" className="h-9 gap-1 sm:h-8" onClick={() => copy(l.url, l.url)}>
                       {copied === l.url ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
-                      {copied === l.url ? "Copied" : "Copy"}
+                      {copied === l.url ? td("copied") : td("copy")}
                     </Button>
                     <DialogDownloadAction url={l.url} name={fallbackName} />
                   </div>
@@ -250,12 +254,12 @@ export function ModDetailsRest({ mod }: { mod: ModItem }) {
         <Button variant="outline" className="gap-1.5" asChild>
           <a href={mod.permalink} target="_blank" rel="noreferrer">
             {isReddit ? <ExternalLink className="h-4 w-4" /> : <Globe className="h-4 w-4" />}
-            {isReddit ? "Open on Reddit" : `Open on ${src?.label ?? "source site"}`}
+            {isReddit ? td("openReddit") : td("openSource", { source: src?.label ?? td("openFallback") })}
           </a>
         </Button>
         <Button variant="outline" className="gap-1.5" onClick={() => copy(mod.permalink, "src")}>
           {copied === "src" ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
-          {copied === "src" ? "Copied" : "Copy link"}
+          {copied === "src" ? td("copied") : td("copyLink")}
         </Button>
       </div>
     </>

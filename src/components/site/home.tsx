@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, PackageOpen, Satellite, WifiOff, Star } from "lucide-react";
@@ -26,6 +27,8 @@ function useDebounced<T>(value: T, delayMs: number): T {
 }
 
 export default function Home() {
+  const t = useTranslations("home");
+  const tr = useTranslations("ribbon");
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const q = useDebounced(search, 350);
@@ -99,8 +102,8 @@ export default function Home() {
       const arrivedIds = new Set(arrived.map((m) => m.id));
       setFreshIds((old) => new Set([...old, ...arrivedIds]));
       toast({
-        title: `🔥 ${arrived.length} new mod${arrived.length === 1 ? "" : "s"} just dropped`,
-        description: arrived[0] ? `Latest: ${arrived[0].title.slice(0, 90)}` : undefined,
+        title: t("newModsToast", { count: arrived.length }),
+        description: arrived[0] ? t("newModsToastLatest", { title: arrived[0].title.slice(0, 90) }) : undefined,
       });
     }
   }, [latest, mods]);
@@ -128,22 +131,22 @@ export default function Home() {
       await refetch();
       if (res.result?.error) {
         toast({
-          title: "Some sources are rate-limiting us",
-          description: "Retrying automatically with backoff — sit tight.",
+          title: t("rateLimitedToast"),
+          description: t("rateLimitedToastBody"),
           variant: "destructive",
         });
       } else if ((res.result?.inserted ?? 0) > 0) {
         toast({
-          title: `Synced — ${res.result!.inserted} new mod${res.result!.inserted === 1 ? "" : "s"} found`,
+          title: t("syncedToast", { count: res.result!.inserted }),
         });
       } else {
-        toast({ title: "Already up to date", description: "No new posts on any source since last sync." });
+        toast({ title: t("upToDateToast"), description: t("upToDateToastBody") });
       }
     },
     onError: () => {
       toast({
-        title: "Sync failed",
-        description: "Could not reach the sync service. Try again in a minute.",
+        title: t("syncFailedToast"),
+        description: t("syncFailedToastBody"),
         variant: "destructive",
       });
     },
@@ -174,17 +177,16 @@ export default function Home() {
           {/* How it works ribbon */}
           <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border bg-card/50 px-3.5 py-2.5 text-xs text-muted-foreground sm:mb-5">
             <span className="inline-flex items-center gap-1.5">
-              <Satellite className="h-3.5 w-3.5 text-primary" aria-hidden="true" /> Auto-syncs all 6 sources every
-              minute
+              <Satellite className="h-3.5 w-3.5 text-primary" aria-hidden="true" /> {tr("autoSync", { count: 6 })}
             </span>
             <span className="hidden text-foreground/15 sm:inline">|</span>
-            <span>Client polls every {POLL_MS / 1000}s — new finds pop a toast</span>
+            <span>{tr("polls", { seconds: POLL_MS / 1000 })}</span>
             <span className="hidden text-foreground/15 sm:inline">|</span>
-            <span>Base64 mod codes are decoded automatically</span>
+            <span>{tr("decoded")}</span>
             {dataUpdatedAt > 0 && (
               <>
                 <span className="hidden text-foreground/15 md:inline">|</span>
-                <span className="hidden md:inline">last checked {new Date(dataUpdatedAt).toLocaleTimeString()}</span>
+                <span className="hidden md:inline">{tr("lastChecked", { time: new Date(dataUpdatedAt).toLocaleTimeString() })}</span>
               </>
             )}
           </div>
@@ -203,7 +205,7 @@ export default function Home() {
 
           {/* States */}
           {isLoading ? (
-            <div className={gridClasses} aria-busy="true" aria-label="Loading mods">
+            <div className={gridClasses} aria-busy="true" aria-label={t("loadingAria")}>
               {Array.from({ length: 8 }).map((_, i) => (
                 <ModCardSkeleton key={i} />
               ))}
@@ -214,13 +216,11 @@ export default function Home() {
                 <WifiOff className="h-6 w-6 text-destructive" aria-hidden="true" />
               </span>
               <div>
-                <p className="tt-h2 text-foreground">Couldn&apos;t load mods</p>
-                <p className="mt-1 text-sm text-destructive">
-                  {(error as Error)?.message ?? "unknown error"} — check your connection and try again.
-                </p>
+                <p className="tt-h2 text-foreground">{t("errorTitle")}</p>
+                <p className="mt-1 text-sm text-destructive">{t("errorBody", { message: (error as Error)?.message ?? "unknown error" })}</p>
               </div>
               <Button variant="outline" className="mt-1 h-10" onClick={() => refetch()}>
-                Try again
+                {t("tryAgain")}
               </Button>
             </div>
           ) : initialSyncing ? (
@@ -229,10 +229,9 @@ export default function Home() {
                 <Satellite className="h-6 w-6 animate-pulse text-primary" aria-hidden="true" />
               </span>
               <div>
-                <p className="tt-h2 text-primary">Connecting to sources…</p>
+                <p className="tt-h2 text-primary">{t("connectingTitle")}</p>
                 <p className="mx-auto mt-1.5 max-w-md text-sm leading-relaxed text-muted-foreground">
-                  JamFinds is pulling the latest posts from 4 subreddits, BeamFinds and BeamFree right now. The first
-                  sync takes a few seconds — this page will fill up automatically.
+                  {t("connectingBody")}
                 </p>
               </div>
             </div>
@@ -242,10 +241,9 @@ export default function Home() {
                 <PackageOpen className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
               </span>
               <div>
-                <p className="tt-h2 text-foreground">No mods match your filters</p>
+                <p className="tt-h2 text-foreground">{t("noMatchTitle")}</p>
                 <p className="mx-auto mt-1.5 max-w-sm text-sm leading-relaxed text-muted-foreground">
-                  Try clearing the search, switching category, or turning off &quot;Ready to download&quot;. New posts
-                  sync automatically every minute.
+                  {t("noMatchBody")}
                 </p>
               </div>
               <Button
@@ -256,7 +254,7 @@ export default function Home() {
                   setFilters(DEFAULT_FILTERS);
                 }}
               >
-                Reset filters
+                {t("resetFilters")}
               </Button>
             </div>
           ) : shownMods.length === 0 ? (
@@ -266,9 +264,9 @@ export default function Home() {
                 <Star className="h-6 w-6 text-primary" aria-hidden="true" />
               </span>
               <div>
-                <p className="tt-h2 text-foreground">Nothing saved yet</p>
+                <p className="tt-h2 text-foreground">{t("nothingSavedTitle")}</p>
                 <p className="mx-auto mt-1.5 max-w-sm text-sm leading-relaxed text-muted-foreground">
-                  Tap the star on any mod card to keep it here — saved mods live on this device.
+                  {t("nothingSavedBody")}
                 </p>
               </div>
             </div>
@@ -296,10 +294,12 @@ export default function Home() {
                   >
                     {isFetchingNextPage ? (
                       <>
-                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Loading…
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> {t("loadingMore")}
                       </>
+                    ) : !savedView && resultCount - mods.length > 0 ? (
+                      t("loadMoreRemaining", { count: resultCount - mods.length })
                     ) : (
-                      `Load more mods${!savedView && resultCount - mods.length > 0 ? ` (${resultCount - mods.length} remaining)` : ""}`
+                      t("loadMore")
                     )}
                   </Button>
                 </div>

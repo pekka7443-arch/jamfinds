@@ -1,10 +1,12 @@
 "use client";
 
 import { RefreshCw, Radio, ExternalLink } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import type { SyncInfo } from "@/lib/types";
 import { NotifyBell } from "./notify-bell";
 import { RelativeTime } from "./relative-time";
+import { LanguageSwitcher } from "./language-switcher";
 
 interface HeaderProps {
   sync: SyncInfo | undefined;
@@ -13,6 +15,7 @@ interface HeaderProps {
 }
 
 export function Header({ sync, refreshing, onRefresh }: HeaderProps) {
+  const t = useTranslations("header");
   const lastSyncOk = sync?.lastResult === "ok" || sync?.lastResult === "partial";
   const degraded = Boolean(sync?.lastError) && !lastSyncOk;
 
@@ -24,7 +27,7 @@ export function Header({ sync, refreshing, onRefresh }: HeaderProps) {
           <a
             href="/"
             className="flex shrink-0 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="JamFinds home"
+            aria-label={t("home")}
           >
             {/* Brand monogram — live "found it" pulse mark (mirrors app/icon.svg) */}
             <svg width="22" height="22" viewBox="0 0 64 64" aria-hidden="true" className="shrink-0">
@@ -53,15 +56,18 @@ export function Header({ sync, refreshing, onRefresh }: HeaderProps) {
             <Radio className={`h-3.5 w-3.5 ${degraded ? "text-destructive" : "text-primary"}`} aria-hidden="true" />
             {sync?.lastSyncAt ? (
               <>
-                synced <RelativeTime iso={sync.lastSyncAt} />
-                {degraded && <span className="text-destructive">(retrying)</span>}
+                {t("synced")} <RelativeTime iso={sync.lastSyncAt} />
+                {degraded && <span className="text-destructive">{t("retrying")}</span>}
               </>
             ) : (
-              "connecting to sources..."
+              t("connecting")
             )}
           </span>
 
           <div className="ml-auto flex shrink-0 items-center gap-2">
+            {/* Language switcher (Task 16) */}
+            <LanguageSwitcher />
+
             {/* Notify-me bell (Web Push) */}
             <NotifyBell />
 
@@ -72,10 +78,10 @@ export function Header({ sync, refreshing, onRefresh }: HeaderProps) {
               onClick={onRefresh}
               disabled={refreshing}
               className="h-11 gap-1.5 border-border sm:h-9"
-              title="Force sync from all sources now"
+              title={t("refreshTitle")}
             >
               <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} aria-hidden="true" />
-              <span className="hidden sm:inline">Refresh</span>
+              <span className="hidden sm:inline">{t("refresh")}</span>
             </Button>
 
             <Button
@@ -84,7 +90,7 @@ export function Header({ sync, refreshing, onRefresh }: HeaderProps) {
               asChild
               className="hidden h-9 gap-1.5 text-muted-foreground hover:text-foreground lg:inline-flex"
             >
-              <a href="https://www.reddit.com/r/Beamng_Jamaica/" target="_blank" rel="noreferrer" title="Visit the subreddit">
+              <a href="https://www.reddit.com/r/Beamng_Jamaica/" target="_blank" rel="noreferrer" title={t("visitSubreddit")}>
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                 r/Beamng_Jamaica
               </a>

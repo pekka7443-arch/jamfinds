@@ -1,16 +1,19 @@
 import type { Metadata } from "next"
-import Link from "next/link"
-import { notFound, redirect } from "next/navigation"
+import { notFound } from "next/navigation"
+import { getTranslations, setRequestLocale } from "next-intl/server"
 import { db } from "@/lib/db"
 import { getModWithSources } from "@/lib/mod-queries"
 import { BRAND } from "@/lib/brand"
+import { routing } from "@/i18n/routing"
+import { redirect } from "@/i18n/navigation"
+import { LanguageSwitcher } from "@/components/site/language-switcher"
 import { ModDetailsHeader, ModDetailsRest, ModMeta } from "@/components/site/mod-details"
 import { Footer } from "@/components/site/footer"
 
 export const dynamic = "force-dynamic"
 
 interface PageProps {
-  params: Promise<{ id: string }>
+  params: Promise<{ locale: string; id: string }>
 }
 
 async function fetchMod(id: string) {
@@ -21,24 +24,28 @@ async function fetchMod(id: string) {
 /**
  * OG metadata for shareable /mod/[id] links: title, description, and the
  * mod's thumbnail as og:image so Discord/Reddit/iMessage unfurls show the
- * actual mod art.
+ * actual mod art. Mod titles/descriptions are user content and stay
+ * untranslated; the localized bits (metadata, canonical hreflang set) come
+ * from the messages of the active locale.
  */
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { id } = await params
+  const { locale, id } = await params
   const mod = await fetchMod(id)
-  if (!mod) return { title: `Mod not found — ${BRAND.name}` }
+  const t = await getTranslations({ locale, namespace: "modPage" })
+  if (!mod) return { title: `${t("notFoundTitle")} — ${BRAND.name}` }
 
   const title = mod.title
   const description =
     mod.text.replace(/\s+/g, " ").trim().slice(0, 180) ||
     `${mod.category.replace("-", " ")} mod for BeamNG.drive, synced live from ${mod.source}.`
   const canonical = `/mod/${id}`
+  const languages = Object.fromEntries(routing.locales.map((l) => [l, l === routing.defaultLocale ? `/mod/${id}` : `/${l}/mod/${id}`]))
   const thumbnail = mod.thumbnail ?? (JSON.parse(mod.images || "[]") as string[])[0] ?? null
 
   return {
     title,
     description,
-    alternates: { canonical },
+    alternates: { canonical, languages },
     openGraph: {
       title,
       description,
@@ -57,19 +64,23 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function ModPage({ params }: PageProps) {
-  const { id } = await params
+  const { locale, id } = await params
+  setRequestLocale(locale)
+  const t = await getTranslations({ locale, namespace: "modPage" })
+  const td = await getTranslations({ locale, namespace: "details" })
   const mod = await fetchMod(id)
   if (!mod) notFound()
 
   // Canonicalization: when a NEWER row carries the same contentHash this
-  // page is a duplicate — send humans and crawlers to the canonical one.
+  // page is a duplicate — send humans and crawlers to the canonical one
+  // (locale-aware: a /fi reader stays on /fi/mod/...).
   if (mod.contentHash) {
     const newest = await db.mod.findFirst({
       where: { contentHash: mod.contentHash },
       orderBy: [{ publishedAt: "desc" }, { id: "asc" }],
       select: { id: true },
     })
-    if (newest && newest.id !== id) redirect(`/mod/${newest.id}`)
+    if (newest && newest.id !== id) redirect({ href: `/mod/${newest.id}`, locale })
   }
 
   return (
@@ -77,7 +88,7 @@ export default async function ModPage({ params }: PageProps) {
       {/* Slim server-rendered top bar (the live header stays homepage-only) */}
       <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-2.5 px-4 sm:px-6">
-          <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="JamFinds home">
+          <a href={`/${locale === "en" ? "" : locale}`} className="flex shrink-0 items-center gap-2" aria-label={BRAND.name}>
             <svg width="22" height="22" viewBox="0 0 64 64" aria-hidden="true" className="shrink-0">
               <rect width="64" height="64" rx="14" fill="#141220" />
               <path d="M17 41a19 19 0 0 1 30-15" stroke="#8B5CF6" strokeWidth="4.5" fill="none" strokeLinecap="round" opacity="0.45" />
@@ -88,19 +99,22 @@ export default async function ModPage({ params }: PageProps) {
               <span className="text-foreground">Jam</span>
               <span className="text-gradient-brand">Finds</span>
             </span>
-          </Link>
-          <Link
-            href="/"
-            className="rounded-md border border-border bg-secondary/60 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors duration-150 hover:border-primary/40 hover:text-primary"
-          >
-            ← Back to live finds
-          </Link>
+          </a>
+          <div className="flex shrink-0 items-center gap-2">
+            <LanguageSwitcher />
+            <a
+              href={`/${locale === "en" ? "" : locale}`}
+              className="rounded-md border border-border bg-secondary/60 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors duration-150 hover:border-primary/40 hover:text-primary"
+            >
+              {t("backHome")}
+            </a>
+          </div>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
+      <main id="main" className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
         <article
-          aria-label={`Mod: ${mod.title}`}
+          aria-label={td("modAria", { title: mod.title })}
           className="mx-auto flex max-w-2xl flex-col gap-4 rounded-xl border border-border bg-popover p-5 shadow-lg sm:p-6"
         >
           <ModDetailsHeader
